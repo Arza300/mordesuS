@@ -20,6 +20,8 @@ export const navigationConfig: NavigationConfig = {
   ],
   footer: [
     { title: "Home", href: "/" },
+    { title: "Sign in", href: "/auth/login" },
+    { title: "Register", href: "/auth/register" },
     { title: "Privacy", href: "/privacy", disabled: true },
     { title: "Terms", href: "/terms", disabled: true },
   ],
