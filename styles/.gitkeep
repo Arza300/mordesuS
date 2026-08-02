@@ -1,0 +1,3 @@
+/* Global styles live in src/app/globals.css (App Router).
+ * Keep this folder for non-global / legacy CSS assets if needed later.
+ */
