@@ -1,6 +1,11 @@
-/**
- * Page section compositions (hero, features, etc.).
- * Keep sections presentational; fetch data in Server Components / services.
- */
-
-export {};
+export { AboutSection } from "@/components/sections/about";
+export { ContactSection } from "@/components/sections/contact";
+export { FaqSection } from "@/components/sections/faq";
+export { HeroSection } from "@/components/sections/hero";
+export { ProcessSection } from "@/components/sections/process";
+export { ProjectsSection } from "@/components/sections/projects";
+export { ServicesSection } from "@/components/sections/services";
+export { StatsSection } from "@/components/sections/stats";
+export { TechnologiesSection } from "@/components/sections/technologies";
+export { TestimonialsSection } from "@/components/sections/testimonials";
+export { WhyUsSection } from "@/components/sections/why-us";

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" fill="none">
+  <defs>
+    <linearGradient id="a" x1="0" y1="0" x2="1600" y2="1000" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#12081F"/>
+      <stop offset="0.5" stop-color="#2A1050"/>
+      <stop offset="1" stop-color="#050505"/>
+    </linearGradient>
+    <radialGradient id="b" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1100 320) rotate(90) scale(480 520)">
+      <stop stop-color="#A855F7" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#A855F7" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#a)"/>
+  <rect width="1600" height="1000" fill="url(#b)"/>
+  <circle cx="420" cy="560" r="220" stroke="#7C3AED" stroke-opacity="0.45" stroke-width="2"/>
+  <circle cx="420" cy="560" r="140" fill="#7C3AED" fill-opacity="0.18"/>
+  <path d="M820 220h360v560H820z" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="2"/>
+  <path d="M880 320h240M880 400h180M880 480h280" stroke="#C084FC" stroke-opacity="0.55" stroke-width="3"/>
+  <text x="80" y="920" fill="#FFFFFF" fill-opacity="0.35" font-family="Arial, sans-serif" font-size="28" letter-spacing="8">AURORA COMMERCE</text>
+</svg>

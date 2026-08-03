@@ -1,9 +1,10 @@
 export const siteConfig = {
   name: "Mordesu Studio",
+  shortName: "Mordesu",
   description:
-    "Software development studio specializing in modern web applications, product engineering, and scalable systems.",
+    "Mordesu Studio designs and builds high-performance web products for ambitious brands — blending cinematic craft with engineering precision.",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
-  ogImage: "/og.png",
+  ogImage: "/og.svg",
   links: {
     twitter: "https://twitter.com/mordesu",
     github: "https://github.com/mordesu",

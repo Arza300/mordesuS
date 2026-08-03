@@ -3,4 +3,10 @@
  * Use `actionClient` from `@/lib/safe-action` for type-safe mutations.
  */
 
-export {};
+export {
+  createProjectAction,
+  updateProjectAction,
+  deleteProjectAction,
+  toggleProjectPublishedAction,
+  uploadProjectImageFormAction,
+} from "@/actions/projects";

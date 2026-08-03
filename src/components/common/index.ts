@@ -1,5 +1,9 @@
-/**
- * Shared presentational components that are not layout or section-specific.
- */
-
-export {};
+export { BrandMark } from "@/components/common/brand-mark";
+export { BrokenLogoButton } from "@/components/common/broken-logo-button";
+export { HoldProgressBar } from "@/components/common/hold-progress-bar";
+export { LoadingScreen } from "@/components/common/loading-screen";
+export { MagneticButton } from "@/components/common/magnetic-button";
+export { NoiseOverlay } from "@/components/common/noise-overlay";
+export { Reveal } from "@/components/common/reveal";
+export { SectionHeading } from "@/components/common/section-heading";
+export { SkipToContent } from "@/components/common/skip-to-content";

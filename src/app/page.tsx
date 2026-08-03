@@ -1,16 +1,15 @@
-import { Container } from "@/components/layout/container";
-import { siteConfig } from "@/config/site";
+import { HeroSection } from "@/components/sections";
+import { getPublishedProjects } from "@/server/projects";
 
-export default function HomePage() {
-  return (
-    <Container className="py-16">
-      <p className="text-muted-foreground text-sm">Foundation ready</p>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-        {siteConfig.name}
-      </h1>
-      <p className="text-muted-foreground mt-3 max-w-2xl">
-        Project scaffolding is in place. Feature pages will be added next.
-      </p>
-    </Container>
-  );
+/**
+ * Marketing sections below the hero are temporarily hidden
+ * until content placement is decided.
+ *
+ * Hidden for now: About, Projects, Services, WhyUs, Process,
+ * Technologies, Stats, Testimonials, FAQ, Contact
+ */
+export default async function HomePage() {
+  const projects = await getPublishedProjects();
+
+  return <HeroSection projects={projects} />;
 }

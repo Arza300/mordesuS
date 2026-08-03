@@ -7,6 +7,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 
 import { registerAction } from "@/actions/auth";
+import {
+  authFieldClassName,
+  authLabelClassName,
+  authSubmitClassName,
+} from "@/components/auth/auth-card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,15 +81,20 @@ export function RegisterForm() {
   });
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4" noValidate>
+    <form onSubmit={onSubmit} className="space-y-6" noValidate>
       {error ? (
-        <Alert variant="destructive">
+        <Alert
+          variant="destructive"
+          className="rounded-none border-red-500/30 bg-red-500/10 text-red-200"
+        >
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
 
       <div className="space-y-2">
-        <Label htmlFor="name">Name</Label>
+        <Label htmlFor="name" className={authLabelClassName}>
+          Name
+        </Label>
         <Input
           id="name"
           type="text"
@@ -92,15 +102,20 @@ export function RegisterForm() {
           placeholder="Your name"
           disabled={isPending}
           aria-invalid={Boolean(errors.name)}
+          className={authFieldClassName}
           {...register("name")}
         />
         {errors.name ? (
-          <p className="text-destructive text-sm">{errors.name.message}</p>
+          <p className="text-[12px] font-light text-red-300/90">
+            {errors.name.message}
+          </p>
         ) : null}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email" className={authLabelClassName}>
+          Email
+        </Label>
         <Input
           id="email"
           type="email"
@@ -108,15 +123,20 @@ export function RegisterForm() {
           placeholder="you@example.com"
           disabled={isPending}
           aria-invalid={Boolean(errors.email)}
+          className={authFieldClassName}
           {...register("email")}
         />
         {errors.email ? (
-          <p className="text-destructive text-sm">{errors.email.message}</p>
+          <p className="text-[12px] font-light text-red-300/90">
+            {errors.email.message}
+          </p>
         ) : null}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password" className={authLabelClassName}>
+          Password
+        </Label>
         <Input
           id="password"
           type="password"
@@ -124,18 +144,23 @@ export function RegisterForm() {
           placeholder="••••••••"
           disabled={isPending}
           aria-invalid={Boolean(errors.password)}
+          className={authFieldClassName}
           {...register("password")}
         />
         {errors.password ? (
-          <p className="text-destructive text-sm">{errors.password.message}</p>
+          <p className="text-[12px] font-light text-red-300/90">
+            {errors.password.message}
+          </p>
         ) : null}
-        <p className="text-muted-foreground text-xs">
+        <p className="text-[12px] font-light text-white/30">
           At least 8 characters with uppercase, lowercase, and a number.
         </p>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="confirmPassword">Confirm password</Label>
+        <Label htmlFor="confirmPassword" className={authLabelClassName}>
+          Confirm password
+        </Label>
         <Input
           id="confirmPassword"
           type="password"
@@ -143,16 +168,21 @@ export function RegisterForm() {
           placeholder="••••••••"
           disabled={isPending}
           aria-invalid={Boolean(errors.confirmPassword)}
+          className={authFieldClassName}
           {...register("confirmPassword")}
         />
         {errors.confirmPassword ? (
-          <p className="text-destructive text-sm">
+          <p className="text-[12px] font-light text-red-300/90">
             {errors.confirmPassword.message}
           </p>
         ) : null}
       </div>
 
-      <Button type="submit" className="w-full" disabled={isPending}>
+      <Button
+        type="submit"
+        className={authSubmitClassName}
+        disabled={isPending}
+      >
         {isPending ? (
           <>
             <Loader2 className="size-4 animate-spin" />

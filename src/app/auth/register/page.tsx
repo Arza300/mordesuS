@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { AuthCard } from "@/components/auth/auth-card";
+import { AuthCard, authLinkClassName } from "@/components/auth/auth-card";
 import { RegisterForm } from "@/components/auth/register-form";
 
 export const metadata = {
@@ -11,15 +11,12 @@ export const metadata = {
 export default function RegisterPage() {
   return (
     <AuthCard
-      title="Create your account"
-      description="Start with email and a strong password. New accounts are USER by default."
+      title="Create account"
+      description="Enter your details to get started. New accounts are USER by default."
       footer={
-        <p className="text-muted-foreground">
+        <p>
           Already have an account?{" "}
-          <Link
-            href="/auth/login"
-            className="text-foreground font-medium underline-offset-4 hover:underline"
-          >
+          <Link href="/auth/login" className={authLinkClassName}>
             Sign in
           </Link>
         </p>

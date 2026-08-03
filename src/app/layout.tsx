@@ -1,22 +1,36 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { DM_Sans, Outfit, Syne } from "next/font/google";
 
-import { Footer } from "@/components/layout/footer";
+import {
+  LoadingScreen,
+  NoiseOverlay,
+  SkipToContent,
+} from "@/components/common";
 import { Navbar } from "@/components/layout/navbar";
 import { Toaster } from "@/components/ui/sonner";
 import { defaultMetadata } from "@/config/seo";
+import { JsonLd } from "@/lib/structured-data";
 import { AppProviders } from "@/providers/app-providers";
 
 import "./globals.css";
 
-const geistSans = Geist({
+const dmSans = DM_Sans({
   variable: "--font-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const syne = Syne({
+  variable: "--font-display",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const outfit = Outfit({
+  variable: "--font-projects",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["200", "300", "400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = defaultMetadata;
@@ -27,15 +41,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} flex min-h-dvh flex-col antialiased`}
+        className={`${dmSans.variable} ${syne.variable} ${outfit.variable} flex min-h-dvh flex-col antialiased`}
       >
         <AppProviders>
+          <SkipToContent />
+          <LoadingScreen />
+          <NoiseOverlay />
           <Navbar />
-          <main className="flex-1">{children}</main>
-          <Footer />
-          <Toaster richColors closeButton />
+          <main id="main-content" className="relative flex-1">
+            {children}
+          </main>
+          <JsonLd />
+          <Toaster richColors closeButton theme="dark" />
         </AppProviders>
       </body>
     </html>

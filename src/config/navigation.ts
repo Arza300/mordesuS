@@ -12,17 +12,17 @@ export type NavigationConfig = {
 
 export const navigationConfig: NavigationConfig = {
   main: [
-    { title: "Home", href: "/" },
-    { title: "Work", href: "/work", disabled: true },
-    { title: "Services", href: "/services", disabled: true },
-    { title: "About", href: "/about", disabled: true },
-    { title: "Contact", href: "/contact", disabled: true },
+    { title: "Work", href: "#work" },
+    { title: "Services", href: "#services" },
+    { title: "About", href: "#about" },
+    { title: "Process", href: "#process" },
+    { title: "Contact", href: "#contact" },
   ],
   footer: [
-    { title: "Home", href: "/" },
+    { title: "Work", href: "#work" },
+    { title: "Services", href: "#services" },
+    { title: "About", href: "#about" },
+    { title: "Contact", href: "#contact" },
     { title: "Sign in", href: "/auth/login" },
-    { title: "Register", href: "/auth/register" },
-    { title: "Privacy", href: "/privacy", disabled: true },
-    { title: "Terms", href: "/terms", disabled: true },
   ],
 };

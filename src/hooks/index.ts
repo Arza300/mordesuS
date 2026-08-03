@@ -1,6 +1,11 @@
-/**
- * Custom React hooks.
- * Keep hooks thin — move business logic to services/actions when possible.
- */
-
-export {};
+export { useHoldChargeAudio } from "@/hooks/use-hold-charge-audio";
+export { useHoldInteraction } from "@/hooks/use-hold-interaction";
+export { useMagnetic } from "@/hooks/use-magnetic";
+export {
+  useIsMobile,
+  useIsTouchDevice,
+  useMediaQuery,
+} from "@/hooks/use-media-query";
+export { useMounted } from "@/hooks/use-mounted";
+export { useMousePosition } from "@/hooks/use-mouse-position";
+export { useReducedMotion } from "@/hooks/use-reduced-motion";

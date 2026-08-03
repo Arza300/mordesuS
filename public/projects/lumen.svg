@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" fill="none">
+  <defs>
+    <radialGradient id="g" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(800 500) rotate(90) scale(700 500)">
+      <stop stop-color="#4C1D95"/>
+      <stop offset="1" stop-color="#050505"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="1000" fill="#050505"/>
+  <rect width="1600" height="1000" fill="url(#g)"/>
+  <path d="M200 700C420 420 620 820 800 500C980 180 1180 640 1400 300" stroke="#A855F7" stroke-opacity="0.55" stroke-width="3"/>
+  <path d="M200 760C420 480 620 880 800 560C980 240 1180 700 1400 360" stroke="#7C3AED" stroke-opacity="0.3" stroke-width="2"/>
+  <circle cx="800" cy="500" r="18" fill="#FFFFFF"/>
+  <circle cx="800" cy="500" r="90" stroke="#FFFFFF" stroke-opacity="0.15"/>
+  <text x="80" y="920" fill="#FFFFFF" fill-opacity="0.35" font-family="Arial, sans-serif" font-size="28" letter-spacing="8">LUMEN IDENTITY</text>
+</svg>

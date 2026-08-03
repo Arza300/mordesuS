@@ -88,5 +88,5 @@ END $$;
 
 -- Allow the app role (authenticator) to use these tables
 GRANT USAGE ON SCHEMA public TO authenticator;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "user", "session", "account", "verification" TO authenticator;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "user", "session", "account", "verification", "project" TO authenticator;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticator;

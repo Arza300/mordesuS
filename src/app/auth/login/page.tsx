@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { AuthCard } from "@/components/auth/auth-card";
+import { AuthCard, authLinkClassName } from "@/components/auth/auth-card";
 import { LoginForm } from "@/components/auth/login-form";
 
 export const metadata = {
@@ -15,19 +15,18 @@ export default function LoginPage() {
       title="Welcome back"
       description="Sign in with your email and password to continue."
       footer={
-        <p className="text-muted-foreground">
+        <p>
           Don&apos;t have an account?{" "}
-          <Link
-            href="/auth/register"
-            className="text-foreground font-medium underline-offset-4 hover:underline"
-          >
+          <Link href="/auth/register" className={authLinkClassName}>
             Create one
           </Link>
         </p>
       }
     >
       <Suspense
-        fallback={<div className="bg-muted h-40 animate-pulse rounded-lg" />}
+        fallback={
+          <div className="h-40 animate-pulse border-b border-white/10 bg-white/5" />
+        }
       >
         <LoginForm />
       </Suspense>

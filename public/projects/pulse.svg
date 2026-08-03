@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" fill="none">
+  <defs>
+    <linearGradient id="a" x1="200" y1="100" x2="1400" y2="900" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1E1035"/>
+      <stop offset="1" stop-color="#050505"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#a)"/>
+  <rect x="240" y="220" width="1120" height="560" rx="28" fill="#0A0A0A" stroke="#FFFFFF" stroke-opacity="0.12"/>
+  <circle cx="320" cy="280" r="10" fill="#F87171"/>
+  <circle cx="360" cy="280" r="10" fill="#FBBF24"/>
+  <circle cx="400" cy="280" r="10" fill="#34D399"/>
+  <rect x="300" y="340" width="280" height="360" rx="18" fill="#111118" stroke="#7C3AED" stroke-opacity="0.35"/>
+  <rect x="620" y="340" width="680" height="160" rx="18" fill="#15151D"/>
+  <rect x="620" y="540" width="320" height="160" rx="18" fill="#15151D"/>
+  <rect x="980" y="540" width="320" height="160" rx="18" fill="#7C3AED" fill-opacity="0.22" stroke="#A855F7" stroke-opacity="0.4"/>
+  <text x="80" y="920" fill="#FFFFFF" fill-opacity="0.35" font-family="Arial, sans-serif" font-size="28" letter-spacing="8">PULSE PLATFORM</text>
+</svg>
