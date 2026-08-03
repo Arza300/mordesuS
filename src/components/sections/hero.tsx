@@ -99,8 +99,14 @@ export function HeroSection({ projects }: HeroSectionProps) {
     });
 
   const experienceActive = holding && completed;
+  /** Heavy WebGL / canvas experiences — desktop only */
+  const showExperiences = experienceActive && !isTouch;
 
   useEffect(() => {
+    if (isTouch) {
+      setExperienceMounted(false);
+      return;
+    }
     if (experienceActive) {
       setExperienceMounted(true);
       return;
@@ -108,7 +114,7 @@ export function HeroSection({ projects }: HeroSectionProps) {
     if (!experienceMounted) return;
     const t = setTimeout(() => setExperienceMounted(false), 600);
     return () => clearTimeout(t);
-  }, [experienceActive, experienceMounted]);
+  }, [experienceActive, experienceMounted, isTouch]);
 
   useHoldChargeAudio({
     progress,
@@ -117,7 +123,7 @@ export function HeroSection({ projects }: HeroSectionProps) {
       projectsOpen ||
       exploding ||
       xpOpen ||
-      experienceActive ||
+      showExperiences ||
       useLogoReassembleAudio,
   });
 
@@ -137,12 +143,17 @@ export function HeroSection({ projects }: HeroSectionProps) {
     if (!xpOpen) setXpDesktopOpen(false);
   }, [xpOpen, setXpDesktopOpen]);
 
-  const logoDispersed = experienceActive || exploding || projectsOpen || xpOpen;
+  const logoDispersed =
+    (experienceActive && !isTouch) || exploding || projectsOpen || xpOpen;
   const currentExperienceId = EXPERIENCE_IDS[
     experienceIndex % EXPERIENCE_IDS.length
   ] as ExperienceId;
 
   useEffect(() => {
+    if (isTouch) {
+      wasExperienceActive.current = experienceActive;
+      return;
+    }
     if (wasExperienceActive.current && !experienceActive) {
       setUseLogoReassembleAudio(true);
       void playLogoReassembleSound();
@@ -152,7 +163,7 @@ export function HeroSection({ projects }: HeroSectionProps) {
       return () => clearTimeout(t);
     }
     wasExperienceActive.current = experienceActive;
-  }, [experienceActive]);
+  }, [experienceActive, isTouch]);
 
   useEffect(() => {
     if (useLogoReassembleAudio && !holding && progress <= 0.001) {
@@ -259,10 +270,10 @@ export function HeroSection({ projects }: HeroSectionProps) {
           aria-hidden
         />
 
-        {experienceMounted ? (
+        {experienceMounted && !isTouch ? (
           isShaderExperience(currentExperienceId) ? (
             <ShaderExperienceCanvas
-              active={experienceActive}
+              active={showExperiences}
               fragmentShader={EXPERIENCE_SHADERS[currentExperienceId]}
               label={currentExperienceId}
               pointerX={pointer.x}
@@ -270,13 +281,13 @@ export function HeroSection({ projects }: HeroSectionProps) {
             />
           ) : currentExperienceId === "neural-synapse" ? (
             <NeuralSynapseCanvas
-              active={experienceActive}
+              active={showExperiences}
               pointerX={pointer.x}
               pointerY={pointer.y}
             />
           ) : currentExperienceId === "radio-storm" ? (
             <RadioStormCanvas
-              active={experienceActive}
+              active={showExperiences}
               pointerX={pointer.x}
               pointerY={pointer.y}
             />
@@ -286,7 +297,7 @@ export function HeroSection({ projects }: HeroSectionProps) {
         <div
           className={cn(
             "relative z-10 flex items-center justify-center transition-opacity duration-500 [perspective:1000px]",
-            (experienceActive || exploding || projectsOpen || xpOpen) &&
+            (showExperiences || exploding || projectsOpen || xpOpen) &&
               "pointer-events-none",
             (projectsOpen || xpOpen) && "opacity-0",
           )}
@@ -295,10 +306,10 @@ export function HeroSection({ projects }: HeroSectionProps) {
             progress={progress}
             holding={holding}
             mouseX={
-              isTouch || experienceActive || exploding || xpOpen ? 0 : mouse.x
+              isTouch || showExperiences || exploding || xpOpen ? 0 : mouse.x
             }
             mouseY={
-              isTouch || experienceActive || exploding || xpOpen ? 0 : mouse.y
+              isTouch || showExperiences || exploding || xpOpen ? 0 : mouse.y
             }
             dispersed={logoDispersed}
           />
@@ -307,7 +318,7 @@ export function HeroSection({ projects }: HeroSectionProps) {
         <div
           className={cn(
             "absolute inset-x-0 top-8 z-20 flex justify-center px-4 transition-opacity duration-400 sm:top-10",
-            (experienceActive || exploding || projectsOpen || xpOpen) &&
+            (showExperiences || exploding || projectsOpen || xpOpen) &&
               "pointer-events-none opacity-0",
           )}
         >
@@ -332,7 +343,7 @@ export function HeroSection({ projects }: HeroSectionProps) {
         <div
           className={cn(
             "pointer-events-none absolute inset-x-0 bottom-10 z-20 flex flex-col items-center gap-3 px-4 transition-opacity duration-400",
-            (experienceActive || exploding || projectsOpen || xpOpen) &&
+            (showExperiences || exploding || projectsOpen || xpOpen) &&
               "opacity-0",
           )}
         >
