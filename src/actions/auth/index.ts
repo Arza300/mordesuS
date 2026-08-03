@@ -46,6 +46,7 @@ export const registerAction = actionClient
           email,
           password: parsedInput.password,
         },
+        headers: await headers(),
       });
 
       return {
@@ -79,6 +80,8 @@ export const loginAction = actionClient
           email: parsedInput.email.toLowerCase(),
           password: parsedInput.password,
         },
+        // Required so nextCookies() can write the session cookie in Server Actions
+        headers: await headers(),
       });
 
       return {

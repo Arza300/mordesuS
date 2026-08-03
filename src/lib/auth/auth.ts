@@ -3,6 +3,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 
 import { env } from "@/env";
+import { getTrustedOrigins } from "@/lib/auth/origins";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/prisma";
 
@@ -12,7 +13,13 @@ export const auth = betterAuth({
   }),
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
-  trustedOrigins: [env.NEXT_PUBLIC_SITE_URL],
+  trustedOrigins: getTrustedOrigins(),
+  advanced: {
+    // Always secure cookies in production so browsers accept them over HTTPS
+    useSecureCookies:
+      env.NODE_ENV === "production" ||
+      env.BETTER_AUTH_URL.startsWith("https://"),
+  },
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,
