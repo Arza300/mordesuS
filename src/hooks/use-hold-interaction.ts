@@ -39,7 +39,6 @@ export function useHoldInteraction({
 
   const startHold = useCallback(() => {
     if (disabled) return;
-    // Allow restart even if a release tween is running
     holdingRef.current = true;
     firedCompleteRef.current = false;
     setHolding(true);

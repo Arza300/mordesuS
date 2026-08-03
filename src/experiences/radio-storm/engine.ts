@@ -107,7 +107,7 @@ export class RadioStormEngine {
       y: this.height / 3,
     };
     this.loop = this.loop.bind(this);
-    this.raf = requestAnimationFrame(this.loop);
+    // rAF starts only when setActive(true)
   }
 
   private get nodeSize() {
@@ -123,13 +123,16 @@ export class RadioStormEngine {
   }
 
   private get nodeCount() {
-    // Slightly denser-cap for hero perf vs standalone fullscreen demo
+    const mobile =
+      typeof window !== "undefined" &&
+      (window.matchMedia("(hover: none), (pointer: coarse)").matches ||
+        window.matchMedia("(max-width: 768px)").matches);
     const raw = floor(
       (this.width * this.height) /
         (this.nodeSize * this.nodeGap) /
         this.nodeGapConstant,
     );
-    return min(raw, 4200);
+    return min(raw, mobile ? 900 : 4200);
   }
 
   private get glowStyle() {
@@ -142,14 +145,18 @@ export class RadioStormEngine {
   }
 
   private get stormStyle() {
+    const mobile =
+      typeof window !== "undefined" &&
+      (window.matchMedia("(hover: none), (pointer: coarse)").matches ||
+        window.matchMedia("(max-width: 768px)").matches);
     return {
       minWindAngle: 50,
       maxWindAngle: 70,
       windVariation: 15,
       windSpeedFactor: 1 / 50,
       windGlowSpeedFactor: 1 / max(1, this.glowState * 3),
-      minParticles: 220,
-      maxParticles: 380,
+      minParticles: mobile ? 80 : 220,
+      maxParticles: mobile ? 140 : 380,
       minParticleLength: this.height / 25,
       maxParticleLength: this.height / 7,
       maxParticleWidth: this.width / 500,
@@ -202,9 +209,14 @@ export class RadioStormEngine {
     if (active) {
       this.triggerStrike();
       this.startInterval();
+      if (!this.raf) {
+        this.raf = requestAnimationFrame(this.loop);
+      }
     } else {
       this.stopInterval();
       this.resetVisualState();
+      cancelAnimationFrame(this.raf);
+      this.raf = 0;
     }
   }
 
@@ -228,7 +240,14 @@ export class RadioStormEngine {
       1,
       Math.floor(cssHeight ?? parent?.clientHeight ?? window.innerHeight),
     );
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    const dpr = Math.min(
+      window.devicePixelRatio || 1,
+      typeof window !== "undefined" &&
+        (window.matchMedia("(hover: none), (pointer: coarse)").matches ||
+          window.matchMedia("(max-width: 768px)").matches)
+        ? 1
+        : 1.5,
+    );
     this.width = w;
     this.height = h;
     this.canvas.width = Math.floor(w * dpr);
@@ -592,9 +611,11 @@ export class RadioStormEngine {
   }
 
   private loop() {
-    if (this.disposed) return;
+    if (this.disposed || !this.active) {
+      this.raf = 0;
+      return;
+    }
     this.raf = requestAnimationFrame(this.loop);
-    if (!this.active) return;
     this.draw();
   }
 

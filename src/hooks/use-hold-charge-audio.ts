@@ -117,6 +117,21 @@ export function useHoldChargeAudio({
   };
 
   useEffect(() => {
+    if (!disabled) return;
+
+    const ctx = ctxRef.current;
+    const master = masterRef.current;
+    if (!ctx || !master || !startedRef.current) return;
+
+    wasHoldingRef.current = false;
+    attackUntilRef.current = 0;
+    fadeGain(master, ctx, SILENT, 0.1);
+    if (highGainRef.current) {
+      fadeGain(highGainRef.current, ctx, SILENT, 0.1);
+    }
+  }, [disabled]);
+
+  useEffect(() => {
     if (disabled) return;
 
     let cancelled = false;

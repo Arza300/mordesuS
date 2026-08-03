@@ -13,6 +13,7 @@ import {
 } from "motion/react";
 
 import { cn } from "@/lib/utils";
+import { useIsTouchDevice } from "@/hooks/use-media-query";
 
 type Shard = {
   id: string;
@@ -155,6 +156,7 @@ export function BrokenLogoButton({
   dispersed = false,
   className,
 }: BrokenLogoButtonProps) {
+  const lite = useIsTouchDevice();
   const charge = progress * progress;
   const gap = 0.35 + progress * 1.15 + charge * 0.85;
 
@@ -166,6 +168,7 @@ export function BrokenLogoButton({
 
   const [glowEpoch, setGlowEpoch] = useState(0);
   const wasDispersed = useRef(false);
+  const shakeSkip = useRef(0);
 
   useEffect(() => {
     mx.set(dispersed ? 0 : mouseX);
@@ -187,7 +190,12 @@ export function BrokenLogoButton({
       return;
     }
 
-    const amp = dispersed ? 22 : charge * 14 + progress * 4;
+    if (lite) {
+      shakeSkip.current ^= 1;
+      if (shakeSkip.current) return;
+    }
+
+    const amp = dispersed ? (lite ? 12 : 22) : charge * 14 + progress * 4;
     const tear =
       Math.sin(t * (dispersed ? 0.08 : 0.037)) > (dispersed ? 0.55 : 0.88) ||
       Math.random() < (dispersed ? 0.35 : 0.04 + charge * 0.08);
@@ -228,7 +236,7 @@ export function BrokenLogoButton({
       }}
       aria-hidden
     >
-      {showGlitchFx ? (
+      {showGlitchFx && !lite ? (
         <svg width="0" height="0" className="absolute" aria-hidden>
           <defs>
             <filter id="mordesu-glitch-red">
@@ -291,7 +299,7 @@ export function BrokenLogoButton({
         }}
       />
 
-      {showGlitchFx ? (
+      {showGlitchFx && !lite ? (
         <>
           <ChromaticGhost
             progress={dispersed ? 1 : progress}
@@ -320,12 +328,13 @@ export function BrokenLogoButton({
           charge={charge}
           dispersed={dispersed}
           holding={holding}
+          lite={lite}
           mx={mx}
           my={my}
         />
       ))}
 
-      {showGlitchFx && (dispersed || progress > 0.1) ? (
+      {showGlitchFx && !lite && (dispersed || progress > 0.1) ? (
         <GlitchSlices
           progress={dispersed ? 1 : progress}
           charge={dispersed ? 1 : charge}
@@ -490,6 +499,7 @@ function ShardPiece({
   charge,
   dispersed,
   holding,
+  lite = false,
   mx,
   my,
 }: {
@@ -500,6 +510,7 @@ function ShardPiece({
   charge: number;
   dispersed: boolean;
   holding: boolean;
+  lite?: boolean;
   mx: MotionValue<number>;
   my: MotionValue<number>;
 }) {
@@ -507,6 +518,7 @@ function ShardPiece({
   const jitterX = useMotionValue(0);
   const jitterY = useMotionValue(0);
   const glitchSkew = useMotionValue(0);
+  const frameSkip = useRef(0);
 
   useAnimationFrame((t) => {
     if ((!holding && !dispersed) || (!dispersed && progress < 0.03)) {
@@ -515,12 +527,17 @@ function ShardPiece({
       glitchSkew.set(0);
       return;
     }
+
+    if (lite) {
+      frameSkip.current ^= 1;
+      if (frameSkip.current) return;
+    }
+
     if (dispersed) {
-      // Micro digital stutter while flying out
-      const amp = 10 * shard.depth;
+      const amp = (lite ? 5 : 10) * shard.depth;
       jitterX.set((Math.random() - 0.5) * amp);
       jitterY.set((Math.random() - 0.5) * amp * 0.4);
-      glitchSkew.set((Math.random() - 0.5) * 10);
+      glitchSkew.set((Math.random() - 0.5) * (lite ? 4 : 10));
       return;
     }
 
@@ -691,7 +708,7 @@ function ShardPiece({
                 delay: stagger,
                 ease: "easeOut",
               }
-            : holding
+            : holding && !lite
               ? {
                   duration: Math.max(0.35, 2.4 - progress * 1.6) + index * 0.12,
                   repeat: Infinity,

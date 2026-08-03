@@ -8,6 +8,7 @@ import {
   ExperiencePointerTracker,
   ShaderExperienceRenderer,
 } from "@/experiences/shared/webgl-renderer";
+import { isCoarsePointer } from "@/lib/device";
 import { cn } from "@/lib/utils";
 
 type ShaderExperienceCanvasProps = {
@@ -18,6 +19,14 @@ type ShaderExperienceCanvasProps = {
   className?: string;
   label?: string;
 };
+
+/** Lower raymarch iteration count on phones (elevator / grid-run). */
+function adaptFragmentForDevice(source: string, mobile: boolean): string {
+  if (!mobile) return source;
+  return source
+    .replace(/i\+\+<400;/g, "i++<140;")
+    .replace(/i\+\+<400\.;/g, "i++<140.;");
+}
 
 export function ShaderExperienceCanvas({
   active,
@@ -33,23 +42,25 @@ export function ShaderExperienceCanvas({
   const rafRef = useRef(0);
   const activeRef = useRef(active);
   const labelRef = useRef(label);
+  const mobileRef = useRef(false);
   activeRef.current = active;
   labelRef.current = label;
 
-  // Create WebGL once for this canvas element — never depend on fragmentShader here
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const dprScale = Math.min(
-      0.65,
-      Math.max(0.4, window.devicePixelRatio * 0.45),
-    );
+    const mobile = isCoarsePointer();
+    mobileRef.current = mobile;
+
+    const dprScale = mobile
+      ? Math.min(0.4, Math.max(0.28, window.devicePixelRatio * 0.28))
+      : Math.min(0.65, Math.max(0.4, window.devicePixelRatio * 0.45));
 
     try {
       const renderer = new ShaderExperienceRenderer(
         canvas,
-        fragmentShader,
+        adaptFragmentForDevice(fragmentShader, mobile),
         dprScale,
       );
       renderer.setup();
@@ -70,8 +81,11 @@ export function ShaderExperienceCanvas({
     window.addEventListener("resize", resize);
 
     const loop = (now: number) => {
+      if (!activeRef.current) {
+        rafRef.current = 0;
+        return;
+      }
       rafRef.current = requestAnimationFrame(loop);
-      if (!activeRef.current) return;
       const renderer = rendererRef.current;
       if (!renderer) return;
       const tracker = trackerRef.current;
@@ -80,10 +94,13 @@ export function ShaderExperienceCanvas({
       renderer.render(now);
     };
 
-    rafRef.current = requestAnimationFrame(loop);
+    if (activeRef.current) {
+      rafRef.current = requestAnimationFrame(loop);
+    }
 
     return () => {
       cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
       window.removeEventListener("resize", resize);
       rendererRef.current?.dispose();
       rendererRef.current = null;
@@ -92,12 +109,13 @@ export function ShaderExperienceCanvas({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount once per canvas
   }, []);
 
-  // Hot-swap fragment program without destroying the WebGL context
   useEffect(() => {
     const renderer = rendererRef.current;
     if (!renderer) return;
     try {
-      renderer.updateFragment(fragmentShader);
+      renderer.updateFragment(
+        adaptFragmentForDevice(fragmentShader, mobileRef.current),
+      );
     } catch (err) {
       console.error(`[${label}] fragment swap failed`, err);
     }
@@ -113,7 +131,25 @@ export function ShaderExperienceCanvas({
       if (canvas && parent && rendererRef.current) {
         rendererRef.current.resize(parent.clientWidth, parent.clientHeight);
       }
+      if (!rafRef.current) {
+        const loop = (now: number) => {
+          if (!activeRef.current) {
+            rafRef.current = 0;
+            return;
+          }
+          rafRef.current = requestAnimationFrame(loop);
+          const renderer = rendererRef.current;
+          if (!renderer) return;
+          const tracker = trackerRef.current;
+          renderer.updateMove(tracker.moves);
+          renderer.updateWheel(tracker.wheel);
+          renderer.render(now);
+        };
+        rafRef.current = requestAnimationFrame(loop);
+      }
     } else {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
       trackerRef.current.onPointerUp();
       trackerRef.current.reset();
     }

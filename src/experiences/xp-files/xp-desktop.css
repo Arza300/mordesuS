@@ -1,0 +1,396 @@
+/* Windows XP explorer easter egg — scoped under .xp-desktop */
+
+.xp-desktop {
+  --xp-titlebar-a: #0a58d9;
+  --xp-titlebar-b: #3f8cf3;
+  --xp-titlebar-c: #1657d6;
+  --xp-face: #ece9d8;
+  --xp-border: #0a246a;
+  --xp-select: #316ac5;
+  --xp-btn-red: #e81123;
+  --ink: #1a1a1a;
+  position: fixed;
+  inset: 0;
+  z-index: 85;
+  overflow: hidden;
+  font-family: Tahoma, "Segoe UI", Verdana, Arial, sans-serif;
+  user-select: none;
+  background: url("https://static.wikitide.net/windowswallpaperwiki/c/cf/Bliss.jpg")
+    center / cover no-repeat;
+}
+
+.xp-desktop * {
+  box-sizing: border-box;
+}
+
+.xp-desktop .xp-back {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 100;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: linear-gradient(180deg, #5b9bf2, #1652c9);
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 0.04em;
+  padding: 8px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.35);
+  box-shadow: 2px 3px 10px rgba(0, 0, 0, 0.35);
+}
+
+.xp-desktop .xp-back:hover {
+  filter: brightness(1.12);
+}
+
+.xp-desktop .xp-window {
+  position: absolute;
+  background: var(--xp-face);
+  border: 1px solid var(--xp-border);
+  border-radius: 8px 8px 3px 3px;
+  box-shadow: 3px 5px 18px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.xp-desktop .main-window {
+  width: min(780px, calc(100vw - 24px));
+  height: min(600px, calc(100dvh - 72px));
+}
+
+.xp-desktop .titlebar {
+  height: 30px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  padding: 0 3px 0 6px;
+  cursor: move;
+  touch-action: none;
+  background: linear-gradient(
+    180deg,
+    var(--xp-titlebar-b) 0%,
+    var(--xp-titlebar-a) 45%,
+    var(--xp-titlebar-c) 55%,
+    var(--xp-titlebar-a) 100%
+  );
+  color: #fff;
+  font-family: "Trebuchet MS", Tahoma, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: bold;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid #0a246a;
+  cursor: default;
+}
+
+.xp-desktop .ttl-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  flex: 0 0 auto;
+}
+
+.xp-desktop .ttl-text {
+  flex: 1 1 auto;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.xp-desktop .win-btns {
+  display: flex;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.xp-desktop .win-btn {
+  width: 21px;
+  height: 19px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  color: #fff;
+  background: linear-gradient(180deg, #5b9bf2, #1652c9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+}
+
+.xp-desktop .win-btn.close {
+  background: linear-gradient(180deg, #f37b73, var(--xp-btn-red));
+}
+
+.xp-desktop .win-btn:hover {
+  filter: brightness(1.15);
+}
+
+.xp-desktop .menubar {
+  flex: 0 0 auto;
+  background: var(--xp-face);
+  border-bottom: 1px solid #aca899;
+  display: flex;
+  font-size: 12.5px;
+  padding: 3px 6px;
+  gap: 14px;
+  color: #000;
+}
+
+.xp-desktop .menubar span {
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.xp-desktop .menubar span:hover {
+  background: #316ac5;
+  color: #fff;
+}
+
+.xp-desktop .toolbar {
+  flex: 0 0 auto;
+  height: 42px;
+  background: linear-gradient(180deg, #fff 0%, #f6f2ea 45%, #ece9d8 100%);
+  border-bottom: 1px solid #aca899;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+}
+
+.xp-desktop .tb-btn {
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: #222;
+  padding: 3px 7px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+}
+
+.xp-desktop .tb-btn.active {
+  border-color: #7f9db9;
+  background: linear-gradient(180deg, #fff, #e2eaf6);
+}
+
+.xp-desktop .tb-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.xp-desktop .addressbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-bottom: 1px solid #aca899;
+  background: var(--xp-face);
+  font-size: 12.5px;
+}
+
+.xp-desktop .addr-input {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid #7f9db9;
+  border-radius: 2px;
+  padding: 2px 6px;
+  height: 22px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.xp-desktop .addr-input svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.xp-desktop .body-area {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+}
+
+.xp-desktop .sidebar {
+  width: 200px;
+  flex: 0 0 auto;
+  background: #fff;
+  border-right: 1px solid #aca899;
+  overflow: auto;
+}
+
+.xp-desktop .sidebar-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--xp-face);
+  font-size: 12.5px;
+  font-weight: bold;
+  padding: 4px 8px;
+}
+
+.xp-desktop .tree {
+  padding: 6px 4px;
+  font-size: 12px;
+  line-height: 20px;
+  color: #000;
+}
+
+.xp-desktop .tree-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-left: calc(var(--depth, 0) * 12px);
+  white-space: nowrap;
+}
+
+.xp-desktop .tree-row svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
+
+.xp-desktop .tree-row.selected .tree-label {
+  background: var(--xp-select);
+  color: #fff;
+  padding: 1px 3px;
+}
+
+.xp-desktop .content {
+  flex: 1 1 auto;
+  background: #fff;
+  overflow: auto;
+  padding: 14px;
+}
+
+.xp-desktop .icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 96px);
+  gap: 18px 8px;
+}
+
+.xp-desktop .file-icon {
+  width: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  padding: 6px 4px;
+  border-radius: 3px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font: inherit;
+}
+
+.xp-desktop .file-icon:hover {
+  background: #e5f1fe;
+  outline: 1px dotted #b5d2f2;
+}
+
+.xp-desktop .file-icon.selected {
+  background: #d8e8fc;
+  outline: 1px dotted #7da2ce;
+}
+
+.xp-desktop .file-icon svg {
+  width: 48px;
+  height: 48px;
+  pointer-events: none;
+}
+
+.xp-desktop .file-icon .name {
+  font-size: 12px;
+  color: #000;
+  line-height: 1.2;
+}
+
+.xp-desktop .statusbar {
+  flex: 0 0 auto;
+  display: flex;
+  border-top: 1px solid #aca899;
+  background: var(--xp-face);
+  font-size: 11.5px;
+  color: #000;
+}
+
+.xp-desktop .statusbar div {
+  padding: 3px 10px;
+  border-right: 1px solid #aca899;
+}
+
+.xp-desktop .statusbar div:last-child {
+  border-right: none;
+  margin-left: auto;
+}
+
+.xp-desktop .notepad {
+  min-width: min(420px, calc(100vw - 32px));
+  min-height: 280px;
+  width: min(560px, calc(100vw - 32px));
+  height: min(420px, calc(100dvh - 80px));
+}
+
+.xp-desktop .np-menu {
+  display: flex;
+  gap: 14px;
+  font-size: 12.5px;
+  padding: 3px 8px;
+  background: var(--xp-face);
+  border-bottom: 1px solid #aca899;
+}
+
+.xp-desktop textarea.np-body {
+  flex: 1 1 auto;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 8px 10px;
+  color: var(--ink);
+  background: #fff;
+  white-space: pre;
+}
+
+.xp-desktop .np-status {
+  flex: 0 0 auto;
+  border-top: 1px solid #aca899;
+  background: var(--xp-face);
+  font-size: 11.5px;
+  padding: 2px 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.xp-desktop .resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+}
+
+@media (max-width: 720px) {
+  .xp-desktop .sidebar {
+    display: none;
+  }
+
+  .xp-desktop .main-window {
+    top: 56px;
+    height: min(560px, calc(100dvh - 72px));
+  }
+}

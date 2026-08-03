@@ -178,9 +178,16 @@ export class NeuralSynapseEngine {
   private lastPointerX = 0;
   private lastPointerY = 0;
   private hasPointer = false;
+  private useBloom = true;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
+
+    const mobile =
+      typeof window !== "undefined" &&
+      (window.matchMedia("(hover: none), (pointer: coarse)").matches ||
+        window.matchMedia("(max-width: 768px)").matches);
+    this.useBloom = !mobile;
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x00000a);
@@ -198,7 +205,9 @@ export class NeuralSynapseEngine {
       powerPreference: "high-performance",
       alpha: false,
     });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+    this.renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio, mobile ? 1 : 1.75),
+    );
 
     const renderScene = new RenderPass(this.scene, this.camera);
     this.bloomPass = new UnrealBloomPass(
@@ -230,15 +239,33 @@ export class NeuralSynapseEngine {
     });
 
     this.buildNeuron();
-    this.dustA = this.makeParticles(900, 120, 0x224466, 0.08, 0.25);
-    this.dustB = this.makeParticles(280, 90, 0x003355, 0.16, 0.18);
-    this.dustC = this.makeParticles(90, 60, 0x00aacc, 0.3, 0.12);
+    this.dustA = this.makeParticles(
+      mobile ? 280 : 900,
+      mobile ? 80 : 120,
+      0x224466,
+      0.08,
+      0.25,
+    );
+    this.dustB = this.makeParticles(
+      mobile ? 90 : 280,
+      mobile ? 60 : 90,
+      0x003355,
+      0.16,
+      0.18,
+    );
+    this.dustC = this.makeParticles(
+      mobile ? 40 : 90,
+      mobile ? 40 : 60,
+      0x00aacc,
+      0.3,
+      0.12,
+    );
     this.scene.add(this.dustA, this.dustB, this.dustC);
 
     this.applyCameraFromSpherical();
     this.resize();
     this.loop = this.loop.bind(this);
-    this.raf = requestAnimationFrame(this.loop);
+    // rAF starts only when setActive(true)
   }
 
   private addBranch(
@@ -387,9 +414,14 @@ export class NeuralSynapseEngine {
       this.hasPointer = false;
       this.applyCameraFromSpherical();
       this.triggerPulse();
+      if (!this.raf) {
+        this.raf = requestAnimationFrame(this.loop);
+      }
     } else {
       this.resetPulse();
       this.hasPointer = false;
+      cancelAnimationFrame(this.raf);
+      this.raf = 0;
     }
   }
 
@@ -466,10 +498,11 @@ export class NeuralSynapseEngine {
   }
 
   private loop() {
-    if (this.disposed) return;
+    if (this.disposed || !this.active) {
+      this.raf = 0;
+      return;
+    }
     this.raf = requestAnimationFrame(this.loop);
-
-    if (!this.active) return;
 
     const delta = this.clock.getDelta();
 
@@ -506,7 +539,11 @@ export class NeuralSynapseEngine {
       this.triggerPulse();
     }
 
-    this.composer.render();
+    if (this.useBloom) {
+      this.composer.render();
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
   }
 
   dispose() {

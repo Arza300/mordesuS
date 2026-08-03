@@ -12,6 +12,9 @@ import { siteConfig } from "@/config/site";
 import { logoutAction } from "@/actions/auth";
 import { useSession } from "@/lib/auth/auth-client";
 import { useLenis } from "@/providers/smooth-scroll-provider";
+import { useProjectsOverlayStore } from "@/stores/projects-overlay-store";
+import { useUiStore } from "@/stores/ui-store";
+import { cn } from "@/lib/utils";
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
@@ -20,6 +23,9 @@ export function Navbar() {
   const { data: session, isPending: sessionPending } = useSession();
   const user = session?.user;
   const isAdmin = user?.role === "ADMIN";
+  const projectsOpen = useProjectsOverlayStore((s) => s.open);
+  const xpDesktopOpen = useUiStore((s) => s.xpDesktopOpen);
+  const hideChrome = projectsOpen || xpDesktopOpen;
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -27,6 +33,10 @@ export function Navbar() {
       document.body.style.overflow = "";
     };
   }, [open]);
+
+  useEffect(() => {
+    if (hideChrome && open) setOpen(false);
+  }, [hideChrome, open]);
 
   useEffect(() => {
     if (open) {
@@ -68,24 +78,38 @@ export function Navbar() {
 
   return (
     <>
-      <header className="pointer-events-none fixed inset-x-0 top-0 z-[70]">
+      <header
+        className={cn(
+          "pointer-events-none fixed inset-x-0 top-0 z-[70] transition-opacity duration-300",
+          hideChrome && "pointer-events-none opacity-0",
+        )}
+        aria-hidden={hideChrome || undefined}
+      >
         <div className="flex items-start justify-between px-5 pt-5 sm:px-8 sm:pt-6 lg:px-10">
           <Link
             href="/"
             data-cursor="hover"
-            className="pointer-events-auto inline-flex items-center"
+            className={cn(
+              "pointer-events-auto inline-flex items-center",
+              hideChrome && "pointer-events-none",
+            )}
             aria-label={siteConfig.name}
+            tabIndex={hideChrome ? -1 : undefined}
           >
             <BrandMark size={48} priority />
           </Link>
 
           <button
             type="button"
-            className="pointer-events-auto inline-flex size-11 items-center justify-center text-white"
+            className={cn(
+              "pointer-events-auto inline-flex size-11 items-center justify-center text-white",
+              hideChrome && "pointer-events-none",
+            )}
             aria-expanded={open}
             aria-controls="studio-menu"
             aria-label={open ? "Close menu" : "Open menu"}
             data-cursor="hover"
+            tabIndex={hideChrome ? -1 : undefined}
             onClick={() => setOpen((v) => !v)}
           >
             {open ? (
@@ -108,7 +132,7 @@ export function Navbar() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.35 }}
-            className="fixed inset-0 z-[60] bg-[#0a0a0a]/94 backdrop-blur-xl"
+            className="fixed inset-0 z-[60] bg-[#0a0a0a] md:bg-[#0a0a0a]/94 md:backdrop-blur-xl"
           >
             <nav className="relative z-10 flex h-full flex-col justify-center px-8 sm:px-16 lg:px-24">
               <ul className="space-y-1">

@@ -75,6 +75,16 @@ export function SmoothScrollProvider({
       return;
     }
 
+    // Touch / phone: prefer native scroll — Lenis + gsap.ticker is idle cost
+    const coarse =
+      typeof window !== "undefined" &&
+      (window.matchMedia("(hover: none), (pointer: coarse)").matches ||
+        window.matchMedia("(max-width: 768px)").matches);
+    if (coarse) {
+      setScrollLockedState(false);
+      return;
+    }
+
     registerGsapPlugins();
 
     const instance = new Lenis({
