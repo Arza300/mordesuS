@@ -119,12 +119,8 @@ export function HeroSection({ projects }: HeroSectionProps) {
   useHoldChargeAudio({
     progress,
     holding,
-    disabled:
-      projectsOpen ||
-      exploding ||
-      xpOpen ||
-      showExperiences ||
-      useLogoReassembleAudio,
+    // Mute only for overlays (XP / projects) — keep charge tone through the 4 experiences until release
+    disabled: projectsOpen || exploding || xpOpen || useLogoReassembleAudio,
   });
 
   useMidBandSecret({
