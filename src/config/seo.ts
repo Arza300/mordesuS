@@ -48,22 +48,6 @@ export const defaultMetadata: Metadata = {
     description: siteConfig.description,
     images: [siteConfig.ogImage],
   },
-  icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/brand/favicon-32.png", type: "image/png", sizes: "32x32" },
-      { url: "/brand/favicon-48.png", type: "image/png", sizes: "48x48" },
-      { url: "/brand/favicon.png", type: "image/png", sizes: "256x256" },
-    ],
-    apple: [
-      {
-        url: "/brand/apple-touch-icon.png",
-        type: "image/png",
-        sizes: "180x180",
-      },
-    ],
-    shortcut: "/favicon.ico",
-  },
   robots: {
     index: true,
     follow: true,
