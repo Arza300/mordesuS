@@ -2,6 +2,9 @@
   "plugins": {
     "neon-postgres": {
       "enabled": true
+    },
+    "gsap-skills": {
+      "enabled": true
     }
   }
 }

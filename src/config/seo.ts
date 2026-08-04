@@ -2,13 +2,17 @@ import type { Metadata } from "next";
 
 import { siteConfig } from "@/config/site";
 
+const defaultTitle = "Mordesu Studio | Web Design & Development Studio";
+const defaultDescription =
+  "Mordesu Studio designs and develops high-performance websites, e-commerce solutions, educational platforms, and custom web applications for businesses and creators.";
+
 export const defaultMetadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
-    default: `${siteConfig.name} — Digital Product Studio`,
+    default: defaultTitle,
     template: `%s | ${siteConfig.name}`,
   },
-  description: siteConfig.description,
+  description: defaultDescription,
   applicationName: siteConfig.name,
   authors: [{ name: siteConfig.creator }],
   creator: siteConfig.creator,
@@ -29,8 +33,8 @@ export const defaultMetadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: siteConfig.url,
-    title: `${siteConfig.name} — Digital Product Studio`,
-    description: siteConfig.description,
+    title: defaultTitle,
+    description: defaultDescription,
     siteName: siteConfig.name,
     images: [
       {
@@ -44,8 +48,8 @@ export const defaultMetadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: `${siteConfig.name} — Digital Product Studio`,
-    description: siteConfig.description,
+    title: defaultTitle,
+    description: defaultDescription,
     images: [siteConfig.ogImage],
   },
   robots: {
