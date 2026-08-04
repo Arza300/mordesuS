@@ -1,5 +1,6 @@
 export { BrandMark } from "@/components/common/brand-mark";
 export { BrokenLogoButton } from "@/components/common/broken-logo-button";
+export { ContactPopup } from "@/components/common/contact-popup";
 export { HoldProgressBar } from "@/components/common/hold-progress-bar";
 export { LoadingScreen } from "@/components/common/loading-screen";
 export { MagneticButton } from "@/components/common/magnetic-button";

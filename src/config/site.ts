@@ -10,10 +10,12 @@ export const siteConfig = {
     github: "https://github.com/mordesu",
     linkedin: "https://linkedin.com/company/mordesu",
     instagram: "https://instagram.com/mordesu",
+    facebook: "https://www.facebook.com/profile.php?id=61562686209159",
+    whatsapp: "https://wa.me/201023005622",
   },
   contact: {
     email: "hello@mordesu.com",
-    phone: "+970 000 000 000",
+    phone: "+20 102 300 5622",
     address: "Palestine",
   },
   creator: "Mordesu Studio",

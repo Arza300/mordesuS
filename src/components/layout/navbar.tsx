@@ -25,7 +25,9 @@ export function Navbar() {
   const isAdmin = user?.role === "ADMIN";
   const projectsOpen = useProjectsOverlayStore((s) => s.open);
   const xpDesktopOpen = useUiStore((s) => s.xpDesktopOpen);
-  const hideChrome = projectsOpen || xpDesktopOpen;
+  const contactOpen = useUiStore((s) => s.contactOpen);
+  const setContactOpen = useUiStore((s) => s.setContactOpen);
+  const hideChrome = projectsOpen || xpDesktopOpen || contactOpen;
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -54,6 +56,10 @@ export function Navbar() {
 
   const go = (href: string) => {
     closeMenu();
+    if (href === "#contact") {
+      setContactOpen(true);
+      return;
+    }
     // Lower sections are temporarily hidden — hash nav disabled for now
     if (!href.startsWith("#")) return;
   };

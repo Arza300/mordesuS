@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DM_Sans, Outfit, Syne } from "next/font/google";
 
 import {
+  ContactPopup,
   LoadingScreen,
   NoiseOverlay,
   SkipToContent,
@@ -50,6 +51,7 @@ export default function RootLayout({
           <LoadingScreen />
           <NoiseOverlay />
           <Navbar />
+          <ContactPopup />
           <main id="main-content" className="relative flex-1">
             {children}
           </main>

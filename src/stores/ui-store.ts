@@ -7,6 +7,9 @@ type UiState = {
   /** Windows XP easter egg overlay is open */
   xpDesktopOpen: boolean;
   setXpDesktopOpen: (open: boolean) => void;
+  /** Contact social popup overlay */
+  contactOpen: boolean;
+  setContactOpen: (open: boolean) => void;
 };
 
 export const useUiStore = create<UiState>((set) => ({
@@ -15,4 +18,6 @@ export const useUiStore = create<UiState>((set) => ({
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
   xpDesktopOpen: false,
   setXpDesktopOpen: (open) => set({ xpDesktopOpen: open }),
+  contactOpen: false,
+  setContactOpen: (open) => set({ contactOpen: open }),
 }));
