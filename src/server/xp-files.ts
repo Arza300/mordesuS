@@ -3,9 +3,12 @@ import "server-only";
 import { DEFAULT_XP_FILES } from "@/data/xp-file-defaults";
 import { prisma } from "@/lib/prisma";
 import {
+  imageUrlForOpenMode,
   normalizeXpIcon,
+  openModeFromImageUrl,
   XP_FILE_CATEGORY,
   type XpFileData,
+  type XpOpenMode,
 } from "@/types/xp-file";
 
 export { DEFAULT_XP_FILES, XP_FILE_CATEGORY };
@@ -20,7 +23,9 @@ function mapProject(row: {
   client: string;
   description: string | null;
   year: string | null;
+  imageUrl: string;
   imageAlt: string;
+  href: string | null;
   sortOrder: number;
 }): XpFileData {
   return {
@@ -31,6 +36,8 @@ function mapProject(row: {
     content: row.description ?? "",
     icon: normalizeXpIcon(row.imageAlt),
     sortOrder: row.sortOrder,
+    href: row.href?.trim() || null,
+    openMode: openModeFromImageUrl(row.imageUrl),
   };
 }
 
@@ -45,6 +52,8 @@ export async function getXpFiles(): Promise<XpFileData[]> {
       return DEFAULT_XP_FILES.map((f, i) => ({
         ...f,
         id: `fallback-${i}`,
+        href: null,
+        openMode: "script" as const,
       }));
     }
     return rows.map(mapProject);
@@ -52,6 +61,8 @@ export async function getXpFiles(): Promise<XpFileData[]> {
     return DEFAULT_XP_FILES.map((f, i) => ({
       ...f,
       id: `fallback-${i}`,
+      href: null,
+      openMode: "script" as const,
     }));
   }
 }
@@ -94,7 +105,11 @@ export function buildXpFileCreateData(input: {
   icon: string;
   sortOrder: number;
   slug: string;
+  href?: string | null;
+  openMode?: XpOpenMode;
 }) {
+  const openMode = input.openMode ?? "script";
+  const href = input.href?.trim() || null;
   return {
     id: projectIdForSlug(input.slug),
     title: input.name,
@@ -102,9 +117,9 @@ export function buildXpFileCreateData(input: {
     category: XP_FILE_CATEGORY,
     description: input.content,
     year: input.lang,
-    imageUrl: "xp-file",
+    imageUrl: imageUrlForOpenMode(openMode),
     imageAlt: input.icon,
-    href: null,
+    href,
     published: false,
     sortOrder: input.sortOrder,
   };
@@ -116,12 +131,16 @@ export function buildXpFileUpdateData(input: {
   content: string;
   icon: string;
   sortOrder: number;
+  href: string | null;
+  openMode: XpOpenMode;
 }) {
   return {
     title: input.name,
     description: input.content,
     year: input.lang,
+    imageUrl: imageUrlForOpenMode(input.openMode),
     imageAlt: input.icon,
+    href: input.href?.trim() || null,
     sortOrder: input.sortOrder,
   };
 }

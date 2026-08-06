@@ -54,23 +54,54 @@ export function XpDesktop({
   const folderRef = useRef<HTMLDivElement>(null);
   const zTop = useRef(10);
   const notepadId = useRef(0);
+  const linkPopups = useRef(new Map<string, Window>());
 
   const [folderPos, setFolderPos] = useState({ x: 0, y: 48 });
   const [folderHidden, setFolderHidden] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [notepads, setNotepads] = useState<NotepadWin[]>([]);
   const [folderZ, setFolderZ] = useState(10);
+  const [popupBlocked, setPopupBlocked] = useState<Record<string, boolean>>({});
 
   const fileById = useCallback(
     (id: string) => files.find((f) => f.id === id) ?? null,
     [files],
   );
 
+  const openExternalSite = useCallback((fileId: string, href: string) => {
+    const existing = linkPopups.current.get(fileId);
+    if (existing && !existing.closed) {
+      existing.focus();
+      setPopupBlocked((prev) => ({ ...prev, [fileId]: false }));
+      return existing;
+    }
+
+    const w = Math.min(1040, window.screen.availWidth - 40);
+    const h = Math.min(760, window.screen.availHeight - 80);
+    const left = Math.max(0, Math.round((window.screen.availWidth - w) / 2));
+    const top = Math.max(0, Math.round((window.screen.availHeight - h) / 2));
+    const popup = window.open(
+      href,
+      `xp-ie-${fileId}`,
+      `popup=yes,width=${w},height=${h},left=${left},top=${top},scrollbars=yes,resizable=yes`,
+    );
+
+    if (!popup) {
+      setPopupBlocked((prev) => ({ ...prev, [fileId]: true }));
+      return null;
+    }
+
+    linkPopups.current.set(fileId, popup);
+    setPopupBlocked((prev) => ({ ...prev, [fileId]: false }));
+    return popup;
+  }, []);
+
   useEffect(() => {
     if (!active) {
       setNotepads([]);
       setSelected(null);
       setFolderHidden(false);
+      setPopupBlocked({});
       return;
     }
     const w = Math.min(780, window.innerWidth - 24);
@@ -154,15 +185,22 @@ export function XpDesktop({
     notepadId.current += 1;
     zTop.current += 1;
     const id = notepadId.current;
+    const file = files.find((f) => f.id === fileId);
+    const isLink = file?.openMode === "link";
+
+    if (isLink && file?.href) {
+      openExternalSite(fileId, file.href);
+    }
+
     setNotepads((prev) => [
       ...prev,
       {
         id,
         fileId,
-        x: 100 + id * 24,
-        y: 80 + id * 24,
-        w: Math.min(560, window.innerWidth - 32),
-        h: Math.min(420, window.innerHeight - 80),
+        x: 80 + id * 24,
+        y: 60 + id * 24,
+        w: Math.min(isLink ? 520 : 560, window.innerWidth - 32),
+        h: Math.min(isLink ? 280 : 420, window.innerHeight - 80),
         z: zTop.current,
       },
     ]);
@@ -382,7 +420,11 @@ export function XpDesktop({
                 });
               }}
             >
-              <span className="ttl-text">{file.name} - Notepad</span>
+              <span className="ttl-text">
+                {file.openMode === "link"
+                  ? `${file.name} - Internet Explorer`
+                  : `${file.name} - Notepad`}
+              </span>
               <div className="win-btns">
                 <div className="win-btn min">_</div>
                 <div className="win-btn max">□</div>
@@ -399,20 +441,80 @@ export function XpDesktop({
               </div>
             </div>
             <div className="np-menu">
-              <span>File</span>
-              <span>Edit</span>
-              <span>Format</span>
-              <span>View</span>
-              <span>Help</span>
+              {file.openMode === "link" ? (
+                <>
+                  <span>File</span>
+                  <span>View</span>
+                  <span>Favorites</span>
+                  <span>Tools</span>
+                  <span>Help</span>
+                </>
+              ) : (
+                <>
+                  <span>File</span>
+                  <span>Edit</span>
+                  <span>Format</span>
+                  <span>View</span>
+                  <span>Help</span>
+                </>
+              )}
             </div>
-            <textarea
-              className="np-body"
-              readOnly
-              spellCheck={false}
-              value={file.content}
-            />
+            {file.openMode === "link" && file.href ? (
+              <div className="np-body np-link-launch">
+                <div className="np-address">
+                  <span className="np-address-label">Address</span>
+                  <input
+                    className="np-address-input"
+                    readOnly
+                    value={file.href}
+                    aria-label="Site address"
+                  />
+                  <button
+                    type="button"
+                    className="np-address-go"
+                    onClick={() => openExternalSite(file.id, file.href!)}
+                  >
+                    Go
+                  </button>
+                </div>
+                <div className="np-link-message">
+                  <p>
+                    This site opens in a real browser window so login and
+                    cookies work the same as Chrome.
+                  </p>
+                  {popupBlocked[file.id] ? (
+                    <p className="np-link-warn">
+                      Popup was blocked — allow popups for this site, then press
+                      Open again.
+                    </p>
+                  ) : null}
+                  <div className="np-link-actions">
+                    <button
+                      type="button"
+                      className="np-link-btn"
+                      onClick={() => openExternalSite(file.id, file.href!)}
+                    >
+                      Open / Focus site
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <textarea
+                className="np-body"
+                readOnly
+                spellCheck={false}
+                value={
+                  file.openMode === "link"
+                    ? "No link set for this file."
+                    : file.content
+                }
+              />
+            )}
             <div className="np-status">
-              {file.lang} file &nbsp; | &nbsp; Ln 1, Col 1
+              {file.openMode === "link" && file.href
+                ? file.href
+                : `${file.lang} file  |  Ln 1, Col 1`}
             </div>
           </div>
         );

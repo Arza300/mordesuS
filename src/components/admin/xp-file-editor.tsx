@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { XpFileData, XpIconId } from "@/types/xp-file";
+import type { XpFileData, XpIconId, XpOpenMode } from "@/types/xp-file";
 import { cn } from "@/lib/utils";
 
 type XpFileEditorProps = {
@@ -29,6 +29,8 @@ export function XpFileEditor({ file }: XpFileEditorProps) {
   const [content, setContent] = useState(file.content);
   const [icon, setIcon] = useState<XpIconId>(file.icon);
   const [sortOrder, setSortOrder] = useState(file.sortOrder);
+  const [href, setHref] = useState(file.href ?? "");
+  const [openMode, setOpenMode] = useState<XpOpenMode>(file.openMode);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -42,13 +44,16 @@ export function XpFileEditor({ file }: XpFileEditorProps) {
         content,
         icon,
         sortOrder,
+        href,
+        openMode,
       });
       if (result?.serverError) {
         setError(result.serverError);
         return;
       }
       if (result?.validationErrors) {
-        setError("Check the fields and try again.");
+        const hrefErrors = result.validationErrors.href?._errors;
+        setError(hrefErrors?.[0] ?? "Check the fields and try again.");
         return;
       }
       toast.success("File saved");
@@ -131,6 +136,54 @@ export function XpFileEditor({ file }: XpFileEditorProps) {
             onChange={(e) => setSortOrder(Number(e.target.value) || 0)}
           />
         </div>
+        <div className="space-y-2">
+          <Label>Open as</Label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setOpenMode("script")}
+              className={cn(
+                "flex-1 rounded-lg border px-3 py-2 text-sm transition-colors",
+                openMode === "script"
+                  ? "border-white/50 bg-white/10"
+                  : "border-white/10 hover:border-white/25",
+              )}
+            >
+              Script
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpenMode("link")}
+              className={cn(
+                "flex-1 rounded-lg border px-3 py-2 text-sm transition-colors",
+                openMode === "link"
+                  ? "border-white/50 bg-white/10"
+                  : "border-white/10 hover:border-white/25",
+              )}
+            >
+              Direct link
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor={`href-${file.id}`}>
+          Link {openMode === "link" ? "(required)" : "(optional)"}
+        </Label>
+        <Input
+          id={`href-${file.id}`}
+          type="url"
+          placeholder="https://example.com"
+          value={href}
+          onChange={(e) => setHref(e.target.value)}
+        />
+        {openMode === "link" ? (
+          <p className="text-xs text-white/40">
+            Opens in a real browser window so login and cookies work like a
+            normal Chrome tab (iframes block sign-in on most sites).
+          </p>
+        ) : null}
       </div>
 
       <div className="space-y-2">
@@ -158,7 +211,9 @@ export function XpFileEditor({ file }: XpFileEditorProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor={`content-${file.id}`}>Contents</Label>
+        <Label htmlFor={`content-${file.id}`}>
+          Contents {openMode === "link" ? "(hidden when opened as link)" : ""}
+        </Label>
         <textarea
           id={`content-${file.id}`}
           value={content}
@@ -187,6 +242,8 @@ export function XpFileCreateForm() {
         content: "",
         icon: "txt",
         sortOrder: 99,
+        openMode: "script",
+        href: null,
       });
       if (result?.serverError) {
         setError(result.serverError);
