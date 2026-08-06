@@ -10,3 +10,9 @@ export {
   toggleProjectPublishedAction,
   uploadProjectImageFormAction,
 } from "@/actions/projects";
+
+export {
+  createXpFileAction,
+  updateXpFileAction,
+  deleteXpFileAction,
+} from "@/actions/xp-files";

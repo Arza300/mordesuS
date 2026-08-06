@@ -12,130 +12,9 @@ import {
   type MotionValue,
 } from "motion/react";
 
+import { LOGO_SHARDS, type LogoShard } from "@/components/projects/logo-shards";
 import { cn } from "@/lib/utils";
 import { useIsTouchDevice } from "@/hooks/use-media-query";
-
-type Shard = {
-  id: string;
-  clip: string;
-  x: number;
-  y: number;
-  rotate: number;
-  depth: number;
-  flyX: number;
-  flyY: number;
-  flyRotate: number;
-  flyScale: number;
-  /** horizontal glitch tear bias during explode */
-  tearX: number;
-};
-
-const SHARDS: Shard[] = [
-  {
-    id: "tl",
-    clip: "polygon(0% 0%, 48% 0%, 42% 52%, 0% 48%)",
-    x: -34,
-    y: -26,
-    rotate: -8,
-    depth: 1.1,
-    flyX: -420,
-    flyY: -260,
-    flyRotate: -78,
-    flyScale: 1.7,
-    tearX: -90,
-  },
-  {
-    id: "tr",
-    clip: "polygon(52% 0%, 100% 0%, 100% 48%, 58% 52%)",
-    x: 34,
-    y: -24,
-    rotate: 8,
-    depth: 1.25,
-    flyX: 440,
-    flyY: -240,
-    flyRotate: 82,
-    flyScale: 1.75,
-    tearX: 110,
-  },
-  {
-    id: "ml",
-    clip: "polygon(0% 42%, 44% 46%, 48% 62%, 0% 68%)",
-    x: -38,
-    y: 6,
-    rotate: -5,
-    depth: 0.85,
-    flyX: -520,
-    flyY: 20,
-    flyRotate: -110,
-    flyScale: 1.55,
-    tearX: -140,
-  },
-  {
-    id: "mc",
-    clip: "polygon(40% 40%, 60% 40%, 58% 70%, 42% 70%)",
-    x: 0,
-    y: -12,
-    rotate: 3,
-    depth: 0.55,
-    flyX: 40,
-    flyY: -280,
-    flyRotate: 48,
-    flyScale: 1.4,
-    tearX: 60,
-  },
-  {
-    id: "mr",
-    clip: "polygon(56% 46%, 100% 42%, 100% 68%, 52% 62%)",
-    x: 38,
-    y: 8,
-    rotate: 6,
-    depth: 0.95,
-    flyX: 540,
-    flyY: 40,
-    flyRotate: 105,
-    flyScale: 1.6,
-    tearX: 150,
-  },
-  {
-    id: "bl",
-    clip: "polygon(0% 62%, 46% 66%, 40% 100%, 0% 100%)",
-    x: -30,
-    y: 32,
-    rotate: -6,
-    depth: 1.15,
-    flyX: -400,
-    flyY: 360,
-    flyRotate: -88,
-    flyScale: 1.8,
-    tearX: -100,
-  },
-  {
-    id: "br",
-    clip: "polygon(54% 66%, 100% 62%, 100% 100%, 60% 100%)",
-    x: 32,
-    y: 34,
-    rotate: 7,
-    depth: 1.2,
-    flyX: 420,
-    flyY: 380,
-    flyRotate: 96,
-    flyScale: 1.75,
-    tearX: 120,
-  },
-  {
-    id: "star",
-    clip: "polygon(68% 8%, 100% 0%, 100% 35%, 72% 42%)",
-    x: 42,
-    y: -40,
-    rotate: 14,
-    depth: 1.55,
-    flyX: 620,
-    flyY: -420,
-    flyRotate: 210,
-    flyScale: 2.1,
-    tearX: 180,
-  },
-];
 
 type BrokenLogoButtonProps = {
   progress?: number;
@@ -143,6 +22,12 @@ type BrokenLogoButtonProps = {
   mouseX?: number;
   mouseY?: number;
   dispersed?: boolean;
+  /** First N shards hide instantly when morph layer takes over */
+  morphFadeCount?: number;
+  /** First N shards stay put until morph targets are ready */
+  morphHoldCount?: number;
+  /** Gentler explode when opening projects (remaining shards only) */
+  softMorphExplode?: boolean;
   className?: string;
 };
 
@@ -154,6 +39,9 @@ export function BrokenLogoButton({
   mouseX = 0,
   mouseY = 0,
   dispersed = false,
+  morphFadeCount = 0,
+  morphHoldCount = 0,
+  softMorphExplode = false,
   className,
 }: BrokenLogoButtonProps) {
   const lite = useIsTouchDevice();
@@ -183,7 +71,11 @@ export function BrokenLogoButton({
   }, [dispersed]);
 
   useAnimationFrame((t) => {
-    if ((!holding && !dispersed) || (progress < 0.02 && !dispersed)) {
+    if (
+      softMorphExplode ||
+      (!holding && !dispersed) ||
+      (progress < 0.02 && !dispersed)
+    ) {
       shakeX.set(0);
       shakeY.set(0);
       skewX.set(0);
@@ -261,26 +153,34 @@ export function BrokenLogoButton({
         initial={{ opacity: 0.55, scale: 1 }}
         animate={{
           opacity: dispersed
-            ? [0.9, 0.4, 0]
+            ? softMorphExplode
+              ? [0.5, 0.2, 0]
+              : [0.9, 0.4, 0]
             : 0.55 + (holding ? progress * 0.45 : 0),
           scale: dispersed
-            ? [1.4, 2.6, 3.2]
+            ? softMorphExplode
+              ? [1.1, 1.4, 1.6]
+              : [1.4, 2.6, 3.2]
             : 1 + (holding ? progress * 0.55 + charge * 0.35 : 0),
         }}
         transition={
           dispersed
-            ? { duration: 0.7, times: [0, 0.35, 1], ease: "easeOut" }
+            ? {
+                duration: softMorphExplode ? 0.9 : 0.7,
+                times: [0, 0.35, 1],
+                ease: "easeOut",
+              }
             : { duration: 0.55, ease: [0.22, 1, 0.36, 1] }
         }
         style={{ background: glowBg }}
       />
 
-      {/* White/violet flash at explode */}
+      {/* Soften/suppress flash when projects morph owns the shards */}
       <motion.div
         className="pointer-events-none absolute inset-[-10%] z-[25] mix-blend-screen"
         initial={false}
         animate={
-          dispersed
+          dispersed && !softMorphExplode
             ? {
                 opacity: [0, 0.85, 0.35, 0],
                 scaleX: [1, 1.4, 1.8],
@@ -299,7 +199,7 @@ export function BrokenLogoButton({
         }}
       />
 
-      {showGlitchFx && !lite ? (
+      {showGlitchFx && !lite && !softMorphExplode ? (
         <>
           <ChromaticGhost
             progress={dispersed ? 1 : progress}
@@ -318,7 +218,7 @@ export function BrokenLogoButton({
         </>
       ) : null}
 
-      {SHARDS.map((shard, i) => (
+      {LOGO_SHARDS.map((shard, i) => (
         <ShardPiece
           key={shard.id}
           shard={shard}
@@ -326,15 +226,20 @@ export function BrokenLogoButton({
           gap={gap}
           progress={progress}
           charge={charge}
-          dispersed={dispersed}
+          dispersed={dispersed && i >= morphHoldCount}
           holding={holding}
           lite={lite}
+          morphHide={dispersed && i < morphFadeCount}
+          softMorphExplode={softMorphExplode}
           mx={mx}
           my={my}
         />
       ))}
 
-      {showGlitchFx && !lite && (dispersed || progress > 0.1) ? (
+      {showGlitchFx &&
+      !lite &&
+      !softMorphExplode &&
+      (dispersed || progress > 0.1) ? (
         <GlitchSlices
           progress={dispersed ? 1 : progress}
           charge={dispersed ? 1 : charge}
@@ -393,7 +298,7 @@ function ChromaticGhost({
       }
       aria-hidden
     >
-      {SHARDS.map((shard) => (
+      {LOGO_SHARDS.map((shard) => (
         <div
           key={`${channel}-${shard.id}`}
           className="absolute inset-0"
@@ -500,10 +405,12 @@ function ShardPiece({
   dispersed,
   holding,
   lite = false,
+  morphHide = false,
+  softMorphExplode = false,
   mx,
   my,
 }: {
-  shard: Shard;
+  shard: LogoShard;
   index: number;
   gap: number;
   progress: number;
@@ -511,6 +418,8 @@ function ShardPiece({
   dispersed: boolean;
   holding: boolean;
   lite?: boolean;
+  morphHide?: boolean;
+  softMorphExplode?: boolean;
   mx: MotionValue<number>;
   my: MotionValue<number>;
 }) {
@@ -521,7 +430,11 @@ function ShardPiece({
   const frameSkip = useRef(0);
 
   useAnimationFrame((t) => {
-    if ((!holding && !dispersed) || (!dispersed && progress < 0.03)) {
+    if (
+      morphHide ||
+      (!holding && !dispersed) ||
+      (!dispersed && progress < 0.03)
+    ) {
       jitterX.set(0);
       jitterY.set(0);
       glitchSkew.set(0);
@@ -534,6 +447,12 @@ function ShardPiece({
     }
 
     if (dispersed) {
+      if (softMorphExplode) {
+        jitterX.set(0);
+        jitterY.set(0);
+        glitchSkew.set(0);
+        return;
+      }
       const amp = (lite ? 5 : 10) * shard.depth;
       jitterX.set((Math.random() - 0.5) * amp);
       jitterY.set((Math.random() - 0.5) * amp * 0.4);
@@ -581,6 +500,32 @@ function ShardPiece({
 
   const stagger = index * 0.028;
 
+  // Morphing shards vanish instantly â€” morph layer continues the same visual
+  if (morphHide) {
+    return (
+      <motion.div
+        className="absolute inset-0 z-10"
+        style={{
+          clipPath: shard.clip,
+          WebkitClipPath: shard.clip,
+        }}
+        initial={false}
+        animate={{ opacity: 0 }}
+        transition={{ duration: 0 }}
+        aria-hidden
+      />
+    );
+  }
+
+  const soft = softMorphExplode;
+  const flyMul = soft ? 0.55 : 1;
+  const explodeOpacity = soft
+    ? ([1, 1, 0.85, 0.4, 0] as number[])
+    : ([1, 1, 1, 0.55, 0] as number[]);
+  const explodeOpacityTimes = soft
+    ? ([0, 0.15, 0.4, 0.7, 1] as number[])
+    : ([0, 0.12, 0.35, 0.7, 1] as number[]);
+
   return (
     <motion.div
       className="absolute inset-0 z-10 will-change-transform"
@@ -597,50 +542,61 @@ function ShardPiece({
       animate={
         dispersed
           ? {
-              // Glitch stutter → reverse tear → explode
               x: [
                 shard.x * gap,
-                shard.tearX,
-                -shard.tearX * 0.35,
-                shard.flyX * 0.55,
-                shard.flyX,
+                soft ? shard.x * gap * 0.5 : shard.tearX,
+                soft ? shard.flyX * 0.12 * flyMul : -shard.tearX * 0.35,
+                shard.flyX * 0.55 * flyMul,
+                shard.flyX * flyMul,
               ],
               y: [
                 shard.y * gap,
                 shard.y * gap * 0.4,
-                shard.flyY * 0.15,
-                shard.flyY * 0.55,
-                shard.flyY,
+                shard.flyY * 0.15 * flyMul,
+                shard.flyY * 0.55 * flyMul,
+                shard.flyY * flyMul,
               ],
               rotate: [
                 shard.rotate,
-                shard.flyRotate * 0.15,
-                -shard.flyRotate * 0.08,
-                shard.flyRotate * 0.6,
-                shard.flyRotate,
+                shard.flyRotate * (soft ? 0.06 : 0.15),
+                -shard.flyRotate * (soft ? 0.03 : 0.08),
+                shard.flyRotate * (soft ? 0.25 : 0.6),
+                shard.flyRotate * (soft ? 0.4 : 1),
               ],
-              skewX: [
-                0,
-                22 * Math.sign(shard.tearX),
-                -28 * Math.sign(shard.tearX),
-                10,
-                0,
-              ],
-              scale: [
-                1 + progress * 0.1,
-                1.2,
-                0.92,
-                shard.flyScale * 0.85,
-                shard.flyScale,
-              ],
-              opacity: [1, 1, 1, 0.55, 0],
-              filter: [
-                `contrast(1.5) drop-shadow(0 0 18px rgba(255,255,255,0.5))`,
-                `contrast(2) hue-rotate(${index % 2 === 0 ? 40 : -50}deg) drop-shadow(0 0 22px rgba(168,85,247,0.7))`,
-                `contrast(1.8) drop-shadow(0 0 16px rgba(0,220,255,0.5))`,
-                `blur(4px) contrast(1.4) drop-shadow(0 0 28px rgba(168,85,247,0.55))`,
-                `blur(16px) drop-shadow(0 0 32px rgba(168,85,247,0.35))`,
-              ],
+              skewX: soft
+                ? [0, 4, -3, 1, 0]
+                : [
+                    0,
+                    22 * Math.sign(shard.tearX),
+                    -28 * Math.sign(shard.tearX),
+                    10,
+                    0,
+                  ],
+              scale: soft
+                ? [1, 1.04, 1.02, 1.08, 1.12]
+                : [
+                    1 + progress * 0.1,
+                    1.2,
+                    0.92,
+                    shard.flyScale * 0.85,
+                    shard.flyScale,
+                  ],
+              opacity: explodeOpacity,
+              filter: soft
+                ? [
+                    IDLE_FILTER,
+                    IDLE_FILTER,
+                    `drop-shadow(0 0 12px rgba(255,255,255,0.3))`,
+                    `blur(2px) drop-shadow(0 0 10px rgba(255,255,255,0.2))`,
+                    `blur(8px)`,
+                  ]
+                : [
+                    `contrast(1.5) drop-shadow(0 0 18px rgba(255,255,255,0.5))`,
+                    `contrast(2) hue-rotate(${index % 2 === 0 ? 40 : -50}deg) drop-shadow(0 0 22px rgba(168,85,247,0.7))`,
+                    `contrast(1.8) drop-shadow(0 0 16px rgba(0,220,255,0.5))`,
+                    `blur(4px) contrast(1.4) drop-shadow(0 0 28px rgba(168,85,247,0.55))`,
+                    `blur(16px) drop-shadow(0 0 32px rgba(168,85,247,0.35))`,
+                  ],
             }
           : {
               scale: 1 + progress * 0.08 + charge * 0.06,
@@ -654,23 +610,23 @@ function ShardPiece({
       transition={
         dispersed
           ? {
-              duration: 0.72,
+              duration: soft ? 0.85 : 0.72,
               times: [0, 0.12, 0.22, 0.55, 1],
-              ease: [0.15, 0.85, 0.2, 1],
+              ease: soft ? [0.22, 0.8, 0.28, 1] : [0.15, 0.85, 0.2, 1],
               delay: stagger,
               opacity: {
-                duration: 0.72,
-                times: [0, 0.12, 0.35, 0.7, 1],
+                duration: soft ? 0.85 : 0.72,
+                times: explodeOpacityTimes,
                 delay: stagger,
               },
-              filter: { duration: 0.72, delay: stagger },
+              filter: { duration: soft ? 0.85 : 0.72, delay: stagger },
             }
           : {
               type: "spring",
               stiffness: 160,
               damping: 20,
               mass: 0.55,
-              delay: (SHARDS.length - index) * 0.03,
+              delay: (LOGO_SHARDS.length - index) * 0.03,
               opacity: { duration: 0.35 },
               filter: { duration: 0.2 },
             }
@@ -684,10 +640,12 @@ function ShardPiece({
         style={{ opacity: dispersed ? undefined : 1 }}
         animate={
           dispersed
-            ? {
-                x: [0, shard.tearX * 0.15, -shard.tearX * 0.1, 0],
-                opacity: [1, 0.7, 1, 0.4],
-              }
+            ? soft
+              ? { x: 0, opacity: 1 }
+              : {
+                  x: [0, shard.tearX * 0.15, -shard.tearX * 0.1, 0],
+                  opacity: [1, 0.7, 1, 0.4],
+                }
             : {
                 x: 0,
                 y: holding
@@ -702,12 +660,14 @@ function ShardPiece({
         }
         transition={
           dispersed
-            ? {
-                duration: 0.45,
-                times: [0, 0.2, 0.4, 1],
-                delay: stagger,
-                ease: "easeOut",
-              }
+            ? soft
+              ? { duration: 0.3 }
+              : {
+                  duration: 0.45,
+                  times: [0, 0.2, 0.4, 1],
+                  delay: stagger,
+                  ease: "easeOut",
+                }
             : holding && !lite
               ? {
                   duration: Math.max(0.35, 2.4 - progress * 1.6) + index * 0.12,

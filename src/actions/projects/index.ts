@@ -13,16 +13,30 @@ import {
   togglePublishedSchema,
   updateProjectSchema,
 } from "@/validators/projects";
+import { XP_FILE_CATEGORY } from "@/types/xp-file";
 
 function emptyToNull(value: string | undefined) {
   if (!value || value.trim() === "") return null;
   return value.trim();
 }
 
+async function findPortfolioProject(id: string) {
+  return prisma.project.findFirst({
+    where: { id, category: { not: XP_FILE_CATEGORY } },
+    select: { id: true },
+  });
+}
+
 export const createProjectAction = actionClient
   .inputSchema(createProjectSchema)
   .action(async ({ parsedInput }) => {
     await assertAdmin();
+
+    if (parsedInput.category === XP_FILE_CATEGORY) {
+      returnValidationErrors(createProjectSchema, {
+        category: { _errors: ["Reserved category"] },
+      });
+    }
 
     const project = await prisma.project.create({
       data: {
@@ -50,10 +64,13 @@ export const updateProjectAction = actionClient
   .action(async ({ parsedInput }) => {
     await assertAdmin();
 
-    const existing = await prisma.project.findUnique({
-      where: { id: parsedInput.id },
-      select: { id: true },
-    });
+    if (parsedInput.category === XP_FILE_CATEGORY) {
+      returnValidationErrors(updateProjectSchema, {
+        category: { _errors: ["Reserved category"] },
+      });
+    }
+
+    const existing = await findPortfolioProject(parsedInput.id);
 
     if (!existing) {
       returnValidationErrors(updateProjectSchema, {
@@ -89,6 +106,14 @@ export const deleteProjectAction = actionClient
   .action(async ({ parsedInput }) => {
     await assertAdmin();
 
+    const existing = await findPortfolioProject(parsedInput.id);
+
+    if (!existing) {
+      returnValidationErrors(projectIdSchema, {
+        id: { _errors: ["Project not found"] },
+      });
+    }
+
     await prisma.project.delete({ where: { id: parsedInput.id } });
 
     revalidatePath("/");
@@ -101,6 +126,14 @@ export const toggleProjectPublishedAction = actionClient
   .inputSchema(togglePublishedSchema)
   .action(async ({ parsedInput }) => {
     await assertAdmin();
+
+    const existing = await findPortfolioProject(parsedInput.id);
+
+    if (!existing) {
+      returnValidationErrors(togglePublishedSchema, {
+        id: { _errors: ["Project not found"] },
+      });
+    }
 
     await prisma.project.update({
       where: { id: parsedInput.id },

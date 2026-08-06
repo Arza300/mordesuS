@@ -8,57 +8,15 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 
+import { XpFileGlyph } from "@/experiences/xp-files/xp-icons";
+import type { XpFileData } from "@/types/xp-file";
 import { cn } from "@/lib/utils";
 
 import "./xp-desktop.css";
 
-type FileKey = "index.html" | "styles.css" | "script.js";
-
-const FILES: Record<FileKey, { lang: string; content: string }> = {
-  "index.html": {
-    lang: "HTML",
-    content: `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Mordesu Studio — Files</title>
-    <link rel="stylesheet" href="./styles.css" />
-  </head>
-  <body>
-    <div id="desktop">
-      <!-- Windows XP folder window lives here -->
-    </div>
-    <script src="./script.js"></script>
-  </body>
-</html>`,
-  },
-  "styles.css": {
-    lang: "CSS",
-    content: `:root {
-  --xp-face: #ece9d8;
-  --xp-border: #0a246a;
-}
-
-#desktop {
-  min-height: 100vh;
-  background: url("bliss.jpg") center / cover;
-}
-
-.xp-window {
-  background: var(--xp-face);
-  border: 1px solid var(--xp-border);
-}`,
-  },
-  "script.js": {
-    lang: "JavaScript",
-    content: `// Hold the hero charge at 50% for 4 seconds.
-// Welcome to the Mordesu XP files easter egg.`,
-  },
-};
-
 type NotepadWin = {
   id: number;
-  file: FileKey;
+  fileId: string;
   x: number;
   y: number;
   w: number;
@@ -69,6 +27,7 @@ type NotepadWin = {
 type XpDesktopProps = {
   active: boolean;
   onClose: () => void;
+  files: XpFileData[];
   className?: string;
 };
 
@@ -85,7 +44,12 @@ function FolderSvg({ className }: { className?: string }) {
   );
 }
 
-export function XpDesktop({ active, onClose, className }: XpDesktopProps) {
+export function XpDesktop({
+  active,
+  onClose,
+  files,
+  className,
+}: XpDesktopProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const folderRef = useRef<HTMLDivElement>(null);
   const zTop = useRef(10);
@@ -93,9 +57,14 @@ export function XpDesktop({ active, onClose, className }: XpDesktopProps) {
 
   const [folderPos, setFolderPos] = useState({ x: 0, y: 48 });
   const [folderHidden, setFolderHidden] = useState(false);
-  const [selected, setSelected] = useState<FileKey | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
   const [notepads, setNotepads] = useState<NotepadWin[]>([]);
   const [folderZ, setFolderZ] = useState(10);
+
+  const fileById = useCallback(
+    (id: string) => files.find((f) => f.id === id) ?? null,
+    [files],
+  );
 
   useEffect(() => {
     if (!active) {
@@ -181,7 +150,7 @@ export function XpDesktop({ active, onClose, className }: XpDesktopProps) {
     [],
   );
 
-  const openNotepad = (file: FileKey) => {
+  const openNotepad = (fileId: string) => {
     notepadId.current += 1;
     zTop.current += 1;
     const id = notepadId.current;
@@ -189,7 +158,7 @@ export function XpDesktop({ active, onClose, className }: XpDesktopProps) {
       ...prev,
       {
         id,
-        file,
+        fileId,
         x: 100 + id * 24,
         y: 80 + id * 24,
         w: Math.min(560, window.innerWidth - 32),
@@ -222,7 +191,6 @@ export function XpDesktop({ active, onClose, className }: XpDesktopProps) {
             zIndex: folderZ,
           }}
           onPointerDown={(e) => {
-            // Bring to front via DOM only — avoid React re-render mid-interaction
             if ((e.target as HTMLElement).closest(".titlebar")) return;
             zTop.current += 1;
             folderRef.current &&
@@ -327,19 +295,24 @@ export function XpDesktop({ active, onClose, className }: XpDesktopProps) {
 
             <div className="content" onClick={() => setSelected(null)}>
               <div className="icon-grid">
-                {(Object.keys(FILES) as FileKey[]).map((file) => (
+                {files.map((file) => (
                   <button
-                    key={file}
+                    key={file.id}
                     type="button"
-                    className={cn("file-icon", selected === file && "selected")}
+                    className={cn(
+                      "file-icon",
+                      selected === file.id && "selected",
+                    )}
                     onClick={(e) => {
                       e.stopPropagation();
-                      setSelected(file);
+                      setSelected(file.id);
                     }}
-                    onDoubleClick={() => openNotepad(file)}
+                    onDoubleClick={() => openNotepad(file.id)}
                   >
-                    <FileGlyph name={file} />
-                    <div className="name">{file}</div>
+                    <div className="file-glyph">
+                      <XpFileGlyph icon={file.icon} />
+                    </div>
+                    <div className="name">{file.name}</div>
                   </button>
                 ))}
               </div>
@@ -347,172 +320,103 @@ export function XpDesktop({ active, onClose, className }: XpDesktopProps) {
           </div>
 
           <div className="statusbar">
-            <div>3 objects</div>
+            <div>
+              {files.length} object{files.length === 1 ? "" : "s"}
+            </div>
             <div>1.23 MB</div>
             <div>My Computer</div>
           </div>
         </div>
       ) : null}
 
-      {notepads.map((win) => (
-        <div
-          key={win.id}
-          className="xp-window notepad"
-          style={{
-            left: win.x,
-            top: win.y,
-            width: win.w,
-            height: win.h,
-            zIndex: win.z,
-          }}
-          onPointerDown={(e) => {
-            if ((e.target as HTMLElement).closest(".titlebar")) return;
-            zTop.current += 1;
-            const el = e.currentTarget;
-            el.style.zIndex = String(zTop.current);
-            setNotepads((prev) =>
-              prev.map((n) =>
-                n.id === win.id ? { ...n, z: zTop.current } : n,
-              ),
-            );
-          }}
-        >
+      {notepads.map((win) => {
+        const file = fileById(win.fileId);
+        if (!file) return null;
+
+        return (
           <div
-            className="titlebar"
+            key={win.id}
+            className="xp-window notepad"
+            style={{
+              left: win.x,
+              top: win.y,
+              width: win.w,
+              height: win.h,
+              zIndex: win.z,
+            }}
             onPointerDown={(e) => {
+              if ((e.target as HTMLElement).closest(".titlebar")) return;
               zTop.current += 1;
-              const winEl = (e.currentTarget as HTMLElement).closest(
-                ".xp-window",
-              ) as HTMLElement | null;
-              if (winEl) winEl.style.zIndex = String(zTop.current);
-              startDrag(e, {
-                getOrigin: () => ({ x: win.x, y: win.y }),
-                commit: (pos) => {
-                  setNotepads((prev) =>
-                    prev.map((n) =>
-                      n.id === win.id
-                        ? { ...n, x: pos.x, y: pos.y, z: zTop.current }
-                        : n,
-                    ),
-                  );
-                },
-                clamp: (x, y) => ({
-                  x: Math.max(0, Math.min(window.innerWidth - 80, x)),
-                  y: Math.max(0, Math.min(window.innerHeight - 40, y)),
-                }),
-              });
+              const el = e.currentTarget;
+              el.style.zIndex = String(zTop.current);
+              setNotepads((prev) =>
+                prev.map((n) =>
+                  n.id === win.id ? { ...n, z: zTop.current } : n,
+                ),
+              );
             }}
           >
-            <span className="ttl-text">{win.file} - Notepad</span>
-            <div className="win-btns">
-              <div className="win-btn min">_</div>
-              <div className="win-btn max">□</div>
-              <div
-                className="win-btn close"
-                onClick={() =>
-                  setNotepads((prev) => prev.filter((n) => n.id !== win.id))
-                }
-                role="button"
-                tabIndex={0}
-              >
-                ✕
+            <div
+              className="titlebar"
+              onPointerDown={(e) => {
+                zTop.current += 1;
+                const winEl = (e.currentTarget as HTMLElement).closest(
+                  ".xp-window",
+                ) as HTMLElement | null;
+                if (winEl) winEl.style.zIndex = String(zTop.current);
+                startDrag(e, {
+                  getOrigin: () => ({ x: win.x, y: win.y }),
+                  commit: (pos) => {
+                    setNotepads((prev) =>
+                      prev.map((n) =>
+                        n.id === win.id
+                          ? { ...n, x: pos.x, y: pos.y, z: zTop.current }
+                          : n,
+                      ),
+                    );
+                  },
+                  clamp: (x, y) => ({
+                    x: Math.max(0, Math.min(window.innerWidth - 80, x)),
+                    y: Math.max(0, Math.min(window.innerHeight - 40, y)),
+                  }),
+                });
+              }}
+            >
+              <span className="ttl-text">{file.name} - Notepad</span>
+              <div className="win-btns">
+                <div className="win-btn min">_</div>
+                <div className="win-btn max">□</div>
+                <div
+                  className="win-btn close"
+                  onClick={() =>
+                    setNotepads((prev) => prev.filter((n) => n.id !== win.id))
+                  }
+                  role="button"
+                  tabIndex={0}
+                >
+                  ✕
+                </div>
               </div>
             </div>
+            <div className="np-menu">
+              <span>File</span>
+              <span>Edit</span>
+              <span>Format</span>
+              <span>View</span>
+              <span>Help</span>
+            </div>
+            <textarea
+              className="np-body"
+              readOnly
+              spellCheck={false}
+              value={file.content}
+            />
+            <div className="np-status">
+              {file.lang} file &nbsp; | &nbsp; Ln 1, Col 1
+            </div>
           </div>
-          <div className="np-menu">
-            <span>File</span>
-            <span>Edit</span>
-            <span>Format</span>
-            <span>View</span>
-            <span>Help</span>
-          </div>
-          <textarea
-            className="np-body"
-            readOnly
-            spellCheck={false}
-            value={FILES[win.file].content}
-          />
-          <div className="np-status">
-            {FILES[win.file].lang} file &nbsp; | &nbsp; Ln 1, Col 1
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
-  );
-}
-
-function FileGlyph({ name }: { name: FileKey }) {
-  if (name === "index.html") {
-    return (
-      <svg viewBox="0 0 64 64" aria-hidden>
-        <path
-          d="M14 2h26l10 10v46a3 3 0 0 1-3 3H14a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3z"
-          fill="#fff"
-          stroke="#8C8C8C"
-          strokeWidth="1.2"
-        />
-        <path d="M40 2v10h10z" fill="#D8D8D8" />
-        <circle cx="32" cy="38" r="16" fill="#1A73E8" />
-        <text
-          x="32"
-          y="43"
-          fontSize="12"
-          fontFamily="Arial"
-          fontWeight="bold"
-          fill="#fff"
-          textAnchor="middle"
-        >
-          {"</>"}
-        </text>
-      </svg>
-    );
-  }
-  if (name === "styles.css") {
-    return (
-      <svg viewBox="0 0 64 64" aria-hidden>
-        <path
-          d="M14 2h26l10 10v46a3 3 0 0 1-3 3H14a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3z"
-          fill="#fff"
-          stroke="#8C8C8C"
-          strokeWidth="1.2"
-        />
-        <path d="M40 2v10h10z" fill="#D8D8D8" />
-        <circle cx="32" cy="38" r="16" fill="#7C4DFF" />
-        <text
-          x="32"
-          y="43"
-          fontSize="11"
-          fontFamily="Arial"
-          fontWeight="bold"
-          fill="#fff"
-          textAnchor="middle"
-        >
-          {"{ }"}
-        </text>
-      </svg>
-    );
-  }
-  return (
-    <svg viewBox="0 0 64 64" aria-hidden>
-      <path
-        d="M14 2h26l10 10v46a3 3 0 0 1-3 3H14a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3z"
-        fill="#fff"
-        stroke="#8C8C8C"
-        strokeWidth="1.2"
-      />
-      <path d="M40 2v10h10z" fill="#D8D8D8" />
-      <rect x="17" y="24" width="30" height="28" rx="3" fill="#F0DB4F" />
-      <text
-        x="32"
-        y="44"
-        fontSize="14"
-        fontFamily="Arial"
-        fontWeight="bold"
-        fill="#323330"
-        textAnchor="middle"
-      >
-        JS
-      </text>
-    </svg>
   );
 }

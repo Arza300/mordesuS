@@ -11,7 +11,7 @@
   --ink: #1a1a1a;
   position: fixed;
   inset: 0;
-  z-index: 85;
+  z-index: 95;
   overflow: hidden;
   font-family: Tahoma, "Segoe UI", Verdana, Arial, sans-serif;
   user-select: none;
@@ -304,10 +304,15 @@
   outline: 1px dotted #7da2ce;
 }
 
-.xp-desktop .file-icon svg {
+.xp-desktop .file-icon .file-glyph {
   width: 48px;
   height: 48px;
   pointer-events: none;
+}
+
+.xp-desktop .file-icon .file-glyph svg {
+  width: 48px;
+  height: 48px;
 }
 
 .xp-desktop .file-icon .name {

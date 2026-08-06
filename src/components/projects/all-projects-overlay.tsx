@@ -8,6 +8,7 @@ import { ChevronDown, Menu } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
 import { BrandMark } from "@/components/common/brand-mark";
+import type { MorphTargetRect } from "@/components/projects/logo-to-projects-morph";
 import type { PublishedProject } from "@/types/project";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +16,10 @@ type AllProjectsOverlayProps = {
   open: boolean;
   projects: PublishedProject[];
   onClose: () => void;
+  /** First N cards stay invisible while morph pieces fly in */
+  morphing?: boolean;
+  morphedCount?: number;
+  onTargetsReady?: (rects: MorphTargetRect[]) => void;
 };
 
 function easeInOutCubic(t: number) {
@@ -44,25 +49,33 @@ function LongArrow({ direction }: { direction: "up" | "down" }) {
   );
 }
 
+/** Default filter label — key shipped ideas, not an exhaustive archive */
+const ALL_LABEL = "Selected Ideas";
+
 export function AllProjectsOverlay({
   open,
   projects,
   onClose,
+  morphing = false,
+  morphedCount = 0,
+  onTargetsReady,
 }: AllProjectsOverlayProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollAnimRef = useRef<number | null>(null);
+  const mediaRefs = useRef<(HTMLDivElement | null)[]>([]);
+
   const categories = useMemo(() => {
     const unique = Array.from(new Set(projects.map((p) => p.category))).sort();
-    return ["All Projects", ...unique];
+    return [ALL_LABEL, ...unique];
   }, [projects]);
 
-  const [filter, setFilter] = useState("All Projects");
+  const [filter, setFilter] = useState(ALL_LABEL);
   const [filterOpen, setFilterOpen] = useState(false);
   const [canScrollUp, setCanScrollUp] = useState(false);
   const [canScrollDown, setCanScrollDown] = useState(false);
 
   const filtered =
-    filter === "All Projects"
+    filter === ALL_LABEL
       ? projects
       : projects.filter((p) => p.category === filter);
 
@@ -92,6 +105,50 @@ export function AllProjectsOverlay({
       }
     };
   }, [open, filtered.length, filter, updateScrollState]);
+
+  // Reset filter when overlay closes so morph always maps to full list order
+  useEffect(() => {
+    if (!open) {
+      setFilter(ALL_LABEL);
+      setFilterOpen(false);
+    }
+  }, [open]);
+
+  // Measure morph target media boxes (first N projects in published order)
+  useEffect(() => {
+    if (!open || !onTargetsReady || morphedCount <= 0) return;
+
+    let cancelled = false;
+    const measure = () => {
+      if (cancelled) return;
+      const rects: MorphTargetRect[] = [];
+      for (let i = 0; i < morphedCount; i++) {
+        const el = mediaRefs.current[i];
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        if (r.width < 2 || r.height < 2) return;
+        rects.push({
+          x: r.left,
+          y: r.top,
+          width: r.width,
+          height: r.height,
+        });
+      }
+      if (rects.length === morphedCount) {
+        onTargetsReady(rects);
+      }
+    };
+
+    // Wait for layout after overlay mounts
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(measure);
+    });
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
+  }, [open, morphedCount, onTargetsReady, projects.length]);
 
   const scrollByPage = (direction: "up" | "down") => {
     const el = scrollRef.current;
@@ -132,6 +189,13 @@ export function AllProjectsOverlay({
   const arrowSideClass =
     "fixed top-1/2 z-30 -translate-y-1/2 p-1 text-white/90 transition-[opacity,transform] duration-300";
 
+  const setMediaRef = useCallback(
+    (index: number) => (el: HTMLDivElement | null) => {
+      mediaRefs.current[index] = el;
+    },
+    [],
+  );
+
   return (
     <AnimatePresence>
       {open ? (
@@ -139,11 +203,14 @@ export function AllProjectsOverlay({
           key="all-projects"
           role="dialog"
           aria-modal="true"
-          aria-label="All projects"
+          aria-label="Selected ideas"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          transition={{
+            duration: 0.7,
+            ease: [0.22, 1, 0.36, 1],
+          }}
           className="font-projects fixed inset-0 z-[80] bg-[#0a0a0a] text-white"
         >
           <button
@@ -198,7 +265,7 @@ export function AllProjectsOverlay({
                   onClick={onClose}
                   className="font-projects text-[12px] font-light tracking-[0.14em] text-white/90 uppercase transition-colors hover:text-white sm:text-[13px]"
                 >
-                  Close All Projects
+                  Close Ideas
                 </button>
                 <span
                   className="inline-flex size-9 items-center justify-center text-white/80"
@@ -268,13 +335,27 @@ export function AllProjectsOverlay({
                 </p>
               ) : (
                 <div className="grid grid-cols-1 gap-x-8 gap-y-12 md:grid-cols-2 md:gap-y-16">
-                  {filtered.map((project, index) => (
-                    <OverlayProjectCard
-                      key={project.id}
-                      project={project}
-                      index={index}
-                    />
-                  ))}
+                  {filtered.map((project, index) => {
+                    // Map filtered index back to published order for morph refs
+                    const publishedIndex = projects.findIndex(
+                      (p) => p.id === project.id,
+                    );
+                    const isMorphSlot =
+                      publishedIndex >= 0 && publishedIndex < morphedCount;
+
+                    return (
+                      <OverlayProjectCard
+                        key={project.id}
+                        project={project}
+                        index={index}
+                        mediaRef={
+                          isMorphSlot ? setMediaRef(publishedIndex) : undefined
+                        }
+                        morphing={morphing}
+                        isMorphSlot={isMorphSlot}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -288,14 +369,23 @@ export function AllProjectsOverlay({
 function OverlayProjectCard({
   project,
   index,
+  mediaRef,
+  morphing = false,
+  isMorphSlot = false,
 }: {
   project: PublishedProject;
   index: number;
+  mediaRef?: (el: HTMLDivElement | null) => void;
+  morphing?: boolean;
+  isMorphSlot?: boolean;
 }) {
   const href = project.href?.trim() || null;
   const media = (
     <>
-      <div className="relative mb-4 aspect-[16/10] overflow-hidden bg-[#141414]">
+      <div
+        ref={mediaRef}
+        className="relative mb-4 aspect-[16/10] overflow-hidden bg-[#141414]"
+      >
         <Image
           src={project.imageUrl}
           alt={project.imageAlt}
@@ -314,15 +404,47 @@ function OverlayProjectCard({
     </>
   );
 
+  // Morph slots: CSS opacity only (no motion re-fire) so handoff has no blank frame.
+  // Remaining cards: soft stagger after morph ends.
+  if (isMorphSlot) {
+    return (
+      <article
+        className={cn(
+          "transition-none",
+          morphing ? "pointer-events-none opacity-0" : "opacity-100",
+        )}
+        aria-hidden={morphing}
+      >
+        {href ? (
+          <a
+            href={href}
+            className="group block"
+            target={href.startsWith("http") ? "_blank" : undefined}
+            rel={href.startsWith("http") ? "noreferrer" : undefined}
+            tabIndex={morphing ? -1 : undefined}
+          >
+            {media}
+          </a>
+        ) : (
+          <div className="group block">{media}</div>
+        )}
+      </article>
+    );
+  }
+
   return (
     <motion.article
       initial={{ opacity: 0, y: 28 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        duration: 0.55,
-        delay: 0.05 + index * 0.06,
-        ease: [0.22, 1, 0.36, 1],
-      }}
+      animate={morphing ? { opacity: 0, y: 28 } : { opacity: 1, y: 0 }}
+      transition={
+        morphing
+          ? { duration: 0 }
+          : {
+              duration: 0.55,
+              delay: 0.05 + index * 0.06,
+              ease: [0.22, 1, 0.36, 1] as const,
+            }
+      }
     >
       {href ? (
         <a

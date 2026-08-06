@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { BrokenLogoButton } from "@/components/common/broken-logo-button";
 import { HoldProgressBar } from "@/components/common/hold-progress-bar";
 import { AllProjectsOverlay } from "@/components/projects/all-projects-overlay";
+import {
+  LogoToProjectsMorph,
+  type MorphTargetRect,
+} from "@/components/projects/logo-to-projects-morph";
+import { morphProjectCount } from "@/components/projects/logo-shards";
 import { getContent } from "@/content";
 import {
   EXPERIENCE_IDS,
@@ -29,19 +34,23 @@ import { useLenis } from "@/providers/smooth-scroll-provider";
 import { useProjectsOverlayStore } from "@/stores/projects-overlay-store";
 import { useUiStore } from "@/stores/ui-store";
 import type { PublishedProject } from "@/types/project";
+import type { XpFileData } from "@/types/xp-file";
 import { cn } from "@/lib/utils";
 
+/** Empty-projects fallback: explode then open overlay */
 const EXPLODE_TO_OVERLAY_MS = 650;
 
 type HeroSectionProps = {
   projects: PublishedProject[];
+  xpFiles: XpFileData[];
 };
 
-export function HeroSection({ projects }: HeroSectionProps) {
+export function HeroSection({ projects, xpFiles }: HeroSectionProps) {
   const content = getContent().hero;
   const isTouch = useIsTouchDevice();
   const { setScrollLocked, scrollLocked } = useLenis();
   const rootRef = useRef<HTMLElement>(null);
+  const logoWrapRef = useRef<HTMLDivElement>(null);
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [pointer, setPointer] = useState({ x: 0, y: 0 });
   const pointerRef = useRef({ x: 0, y: 0 });
@@ -55,11 +64,27 @@ export function HeroSection({ projects }: HeroSectionProps) {
   const setXpDesktopOpen = useUiStore((s) => s.setXpDesktopOpen);
   const wasExperienceActive = useRef(false);
   const explodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [logoRect, setLogoRect] = useState<MorphTargetRect | null>(null);
+  const [morphTargets, setMorphTargets] = useState<MorphTargetRect[] | null>(
+    null,
+  );
+
+  const morphedCount = useMemo(
+    () => morphProjectCount(projects.length),
+    [projects.length],
+  );
+  const morphProjects = useMemo(
+    () => projects.slice(0, morphedCount),
+    [projects, morphedCount],
+  );
 
   const {
     open: projectsOpen,
     exploding,
+    morphing,
     openProjects,
+    beginMorph,
+    completeMorph,
     markOverlayReady,
     closeProjects,
   } = useProjectsOverlayStore();
@@ -80,7 +105,8 @@ export function HeroSection({ projects }: HeroSectionProps) {
   }, [projectsOpen, setScrollLocked]);
 
   useEffect(() => {
-    if (!exploding) return;
+    // Only the empty-projects path waits; morph starts on click
+    if (!exploding || morphing || projectsOpen || morphedCount > 0) return;
 
     explodeTimer.current = setTimeout(() => {
       markOverlayReady();
@@ -89,13 +115,37 @@ export function HeroSection({ projects }: HeroSectionProps) {
     return () => {
       if (explodeTimer.current) clearTimeout(explodeTimer.current);
     };
-  }, [exploding, markOverlayReady]);
+  }, [exploding, morphing, projectsOpen, morphedCount, markOverlayReady]);
+
+  useEffect(() => {
+    if (!projectsOpen && !morphing && !exploding) {
+      setMorphTargets(null);
+      setLogoRect(null);
+    }
+  }, [projectsOpen, morphing, exploding]);
+
+  // Safety: never stay stuck in morphing if targets fail to measure
+  useEffect(() => {
+    if (!morphing) return;
+    const t = setTimeout(() => {
+      completeMorph();
+    }, 3200);
+    return () => clearTimeout(t);
+  }, [morphing, completeMorph]);
+
+  const handleTargetsReady = useCallback((rects: MorphTargetRect[]) => {
+    setMorphTargets(rects);
+  }, []);
+
+  const handleMorphComplete = useCallback(() => {
+    completeMorph();
+  }, [completeMorph]);
 
   const { progress, holding, completed, startHold, endHold, reset } =
     useHoldInteraction({
       duration: 1.15,
       releaseDuration: 0.55,
-      disabled: projectsOpen || exploding || xpOpen,
+      disabled: projectsOpen || exploding || morphing || xpOpen,
     });
 
   const experienceActive = holding && completed;
@@ -120,12 +170,17 @@ export function HeroSection({ projects }: HeroSectionProps) {
     progress,
     holding,
     // Mute only for overlays (XP / projects) — keep charge tone through the 4 experiences until release
-    disabled: projectsOpen || exploding || xpOpen || useLogoReassembleAudio,
+    disabled:
+      projectsOpen || exploding || morphing || xpOpen || useLogoReassembleAudio,
   });
 
   useMidBandSecret({
     progress,
-    enabled: !projectsOpen && !exploding && !xpOpen,
+    enabled: !projectsOpen && !exploding && !morphing && !xpOpen,
+    // Wide mid zone — feather hold/release to stay here ~2s to unlock XP
+    bandMin: 0.22,
+    bandMax: 0.78,
+    dwellMs: 2000,
     onUnlock: () => {
       endHold();
       reset();
@@ -140,7 +195,11 @@ export function HeroSection({ projects }: HeroSectionProps) {
   }, [xpOpen, setXpDesktopOpen]);
 
   const logoDispersed =
-    (experienceActive && !isTouch) || exploding || projectsOpen || xpOpen;
+    (experienceActive && !isTouch) ||
+    exploding ||
+    morphing ||
+    projectsOpen ||
+    xpOpen;
   const currentExperienceId = EXPERIENCE_IDS[
     experienceIndex % EXPERIENCE_IDS.length
   ] as ExperienceId;
@@ -172,11 +231,31 @@ export function HeroSection({ projects }: HeroSectionProps) {
     e.preventDefault();
     endHold();
     void playLogoExplodeSound();
-    openProjects();
+
+    const el = logoWrapRef.current;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      setLogoRect({
+        x: r.left,
+        y: r.top,
+        width: r.width,
+        height: r.height,
+      });
+    }
+    setMorphTargets(null);
+
+    // Morph path: hand off to flying shards in the same gesture — no blank gap
+    if (morphedCount > 0) {
+      beginMorph();
+    } else {
+      openProjects();
+    }
   };
 
   const handleCloseProjects = () => {
     void playLogoReassembleSound();
+    setMorphTargets(null);
+    setLogoRect(null);
     closeProjects();
   };
 
@@ -185,6 +264,8 @@ export function HeroSection({ projects }: HeroSectionProps) {
     setXpOpen(false);
     setXpDesktopOpen(false);
   };
+
+  const hideLogoChrome = (projectsOpen && !morphing) || xpOpen;
 
   return (
     <>
@@ -220,7 +301,7 @@ export function HeroSection({ projects }: HeroSectionProps) {
           });
         }}
         onPointerDown={(e) => {
-          if (projectsOpen || exploding || xpOpen) return;
+          if (projectsOpen || exploding || morphing || xpOpen) return;
           if (e.button !== 0) return;
           activePointer.current = e.pointerId;
           pointerRef.current = { x: e.clientX, y: e.clientY };
@@ -291,30 +372,46 @@ export function HeroSection({ projects }: HeroSectionProps) {
         ) : null}
 
         <div
+          ref={logoWrapRef}
           className={cn(
             "relative z-10 flex items-center justify-center transition-opacity duration-500 [perspective:1000px]",
-            (showExperiences || exploding || projectsOpen || xpOpen) &&
+            (showExperiences ||
+              exploding ||
+              morphing ||
+              projectsOpen ||
+              xpOpen) &&
               "pointer-events-none",
-            (projectsOpen || xpOpen) && "opacity-0",
+            hideLogoChrome && "opacity-0",
           )}
         >
           <BrokenLogoButton
             progress={progress}
             holding={holding}
             mouseX={
-              isTouch || showExperiences || exploding || xpOpen ? 0 : mouse.x
+              isTouch || showExperiences || exploding || morphing || xpOpen
+                ? 0
+                : mouse.x
             }
             mouseY={
-              isTouch || showExperiences || exploding || xpOpen ? 0 : mouse.y
+              isTouch || showExperiences || exploding || morphing || xpOpen
+                ? 0
+                : mouse.y
             }
             dispersed={logoDispersed}
+            morphFadeCount={morphing && morphTargets ? morphedCount : 0}
+            morphHoldCount={morphing && !morphTargets ? morphedCount : 0}
+            softMorphExplode={morphing || (exploding && morphedCount > 0)}
           />
         </div>
 
         <div
           className={cn(
             "absolute inset-x-0 top-8 z-20 flex justify-center px-4 transition-opacity duration-400 sm:top-10",
-            (showExperiences || exploding || projectsOpen || xpOpen) &&
+            (showExperiences ||
+              exploding ||
+              morphing ||
+              projectsOpen ||
+              xpOpen) &&
               "pointer-events-none opacity-0",
           )}
         >
@@ -339,7 +436,11 @@ export function HeroSection({ projects }: HeroSectionProps) {
         <div
           className={cn(
             "pointer-events-none absolute inset-x-0 bottom-10 z-20 flex flex-col items-center gap-3 px-4 transition-opacity duration-400",
-            (showExperiences || exploding || projectsOpen || xpOpen) &&
+            (showExperiences ||
+              exploding ||
+              morphing ||
+              projectsOpen ||
+              xpOpen) &&
               "opacity-0",
           )}
         >
@@ -363,13 +464,24 @@ export function HeroSection({ projects }: HeroSectionProps) {
         ) : null}
       </section>
 
+      <LogoToProjectsMorph
+        active={morphing}
+        projects={morphProjects}
+        logoRect={logoRect}
+        targets={morphTargets}
+        onComplete={handleMorphComplete}
+      />
+
       <AllProjectsOverlay
         open={projectsOpen}
         projects={projects}
         onClose={handleCloseProjects}
+        morphing={morphing}
+        morphedCount={morphedCount}
+        onTargetsReady={handleTargetsReady}
       />
 
-      <XpDesktop active={xpOpen} onClose={handleCloseXp} />
+      <XpDesktop active={xpOpen} onClose={handleCloseXp} files={xpFiles} />
     </>
   );
 }

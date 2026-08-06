@@ -2,6 +2,7 @@ import "dotenv/config";
 
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { PrismaClient } from "../src/generated/prisma";
+import { DEFAULT_XP_FILES } from "../src/data/xp-file-defaults";
 
 const adapter = new PrismaNeon({
   connectionString: process.env.DATABASE_URL!,
@@ -89,6 +90,29 @@ async function main() {
   }
 
   console.log(`Seeded ${seedProjects.length} projects`);
+
+  for (const file of DEFAULT_XP_FILES) {
+    const id = `xp-${file.slug}`;
+    await prisma.project.upsert({
+      where: { id },
+      create: {
+        id,
+        title: file.name,
+        client: file.slug,
+        category: "__xp_file__",
+        description: file.content,
+        year: file.lang,
+        imageUrl: "xp-file",
+        imageAlt: file.icon,
+        href: null,
+        published: false,
+        sortOrder: file.sortOrder,
+      },
+      update: {},
+    });
+  }
+
+  console.log(`Seeded ${DEFAULT_XP_FILES.length} XP files`);
 }
 
 main()

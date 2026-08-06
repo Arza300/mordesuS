@@ -28,6 +28,12 @@ export default async function AdminLayout({
               >
                 Projects
               </Link>
+              <Link
+                href="/admin/xp-files"
+                className="transition-colors hover:text-white"
+              >
+                XP Files
+              </Link>
               <Link href="/" className="transition-colors hover:text-white">
                 View site
               </Link>
