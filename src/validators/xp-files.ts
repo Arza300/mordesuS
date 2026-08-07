@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { XP_ICON_IDS, XP_OPEN_MODES } from "@/types/xp-file";
+import { openModeNeedsHref, XP_ICON_IDS, XP_OPEN_MODES } from "@/types/xp-file";
 
 const hrefField = z
   .string()
@@ -8,6 +8,14 @@ const hrefField = z
   .max(2048, "Link is too long")
   .nullish()
   .transform((value) => (value && value.length > 0 ? value : null));
+
+/** Digits only, 4–12 chars. Empty string means “leave unchanged”. */
+const pinField = z
+  .string()
+  .trim()
+  .refine((value) => value === "" || /^\d{4,12}$/.test(value), {
+    message: "PIN must be 4–12 digits",
+  });
 
 export const updateXpFileSchema = z
   .object({
@@ -27,12 +35,17 @@ export const updateXpFileSchema = z
     sortOrder: z.coerce.number().int().min(0).max(999),
     href: hrefField,
     openMode: z.enum(XP_OPEN_MODES).default("script"),
+    pin: pinField.optional().default(""),
+    clearPin: z.boolean().optional().default(false),
   })
   .superRefine((data, ctx) => {
-    if (data.openMode === "link" && !data.href) {
+    if (openModeNeedsHref(data.openMode) && !data.href) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Link is required for direct link mode",
+        message:
+          data.openMode === "link"
+            ? "Link is required for direct link mode"
+            : `Upload or paste a ${data.openMode} URL`,
         path: ["href"],
       });
     }
@@ -64,3 +77,21 @@ export type CreateXpFileInput = z.infer<typeof createXpFileSchema>;
 export const xpFileIdSchema = z.object({
   id: z.string().min(1),
 });
+
+export const xpMediaUploadSchema = z.object({
+  kind: z.enum(["image", "video"]),
+  contentType: z.string().trim().min(1).max(120),
+  filename: z.string().trim().min(1).max(255),
+});
+
+export type XpMediaUploadInput = z.infer<typeof xpMediaUploadSchema>;
+
+export const verifyXpFilePinSchema = z.object({
+  id: z.string().min(1),
+  pin: z
+    .string()
+    .trim()
+    .regex(/^\d{4,12}$/, "PIN must be 4–12 digits"),
+});
+
+export type VerifyXpFilePinInput = z.infer<typeof verifyXpFilePinSchema>;

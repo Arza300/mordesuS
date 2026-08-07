@@ -6,6 +6,7 @@ import {
   imageUrlForOpenMode,
   normalizeXpIcon,
   openModeFromImageUrl,
+  pinHashFromImageUrl,
   XP_FILE_CATEGORY,
   type XpFileData,
   type XpOpenMode,
@@ -38,7 +39,18 @@ function mapProject(row: {
     sortOrder: row.sortOrder,
     href: row.href?.trim() || null,
     openMode: openModeFromImageUrl(row.imageUrl),
+    locked: Boolean(pinHashFromImageUrl(row.imageUrl)),
   };
+}
+
+function fallbackFiles(): XpFileData[] {
+  return DEFAULT_XP_FILES.map((f, i) => ({
+    ...f,
+    id: `fallback-${i}`,
+    href: null,
+    openMode: "script" as const,
+    locked: false,
+  }));
 }
 
 /** Public read for the XP desktop easter egg. */
@@ -48,22 +60,10 @@ export async function getXpFiles(): Promise<XpFileData[]> {
       where: { category: XP_FILE_CATEGORY },
       orderBy: { sortOrder: "asc" },
     });
-    if (rows.length === 0) {
-      return DEFAULT_XP_FILES.map((f, i) => ({
-        ...f,
-        id: `fallback-${i}`,
-        href: null,
-        openMode: "script" as const,
-      }));
-    }
+    if (rows.length === 0) return fallbackFiles();
     return rows.map(mapProject);
   } catch {
-    return DEFAULT_XP_FILES.map((f, i) => ({
-      ...f,
-      id: `fallback-${i}`,
-      href: null,
-      openMode: "script" as const,
-    }));
+    return fallbackFiles();
   }
 }
 
@@ -107,6 +107,7 @@ export function buildXpFileCreateData(input: {
   slug: string;
   href?: string | null;
   openMode?: XpOpenMode;
+  pinHash?: string | null;
 }) {
   const openMode = input.openMode ?? "script";
   const href = input.href?.trim() || null;
@@ -117,7 +118,7 @@ export function buildXpFileCreateData(input: {
     category: XP_FILE_CATEGORY,
     description: input.content,
     year: input.lang,
-    imageUrl: imageUrlForOpenMode(openMode),
+    imageUrl: imageUrlForOpenMode(openMode, input.pinHash),
     imageAlt: input.icon,
     href,
     published: false,
@@ -133,12 +134,13 @@ export function buildXpFileUpdateData(input: {
   sortOrder: number;
   href: string | null;
   openMode: XpOpenMode;
+  pinHash?: string | null;
 }) {
   return {
     title: input.name,
     description: input.content,
     year: input.lang,
-    imageUrl: imageUrlForOpenMode(input.openMode),
+    imageUrl: imageUrlForOpenMode(input.openMode, input.pinHash),
     imageAlt: input.icon,
     href: input.href?.trim() || null,
     sortOrder: input.sortOrder,

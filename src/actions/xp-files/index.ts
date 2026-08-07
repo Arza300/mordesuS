@@ -3,18 +3,22 @@
 import { revalidatePath } from "next/cache";
 import { returnValidationErrors } from "next-safe-action";
 
+import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { actionClient } from "@/lib/safe-action";
+import { createXpMediaUploadUrl } from "@/lib/r2-upload";
 import { prisma } from "@/lib/prisma";
 import { assertAdmin } from "@/server/auth/session";
 import {
   buildXpFileCreateData,
   buildXpFileUpdateData,
 } from "@/server/xp-files";
-import { XP_FILE_CATEGORY } from "@/types/xp-file";
+import { pinHashFromImageUrl, XP_FILE_CATEGORY } from "@/types/xp-file";
 import {
   createXpFileSchema,
   updateXpFileSchema,
+  verifyXpFilePinSchema,
   xpFileIdSchema,
+  xpMediaUploadSchema,
 } from "@/validators/xp-files";
 
 function slugifyName(name: string) {
@@ -33,7 +37,7 @@ export const updateXpFileAction = actionClient
 
     const existing = await prisma.project.findFirst({
       where: { id: parsedInput.id, category: XP_FILE_CATEGORY },
-      select: { id: true },
+      select: { id: true, imageUrl: true },
     });
 
     if (!existing) {
@@ -42,9 +46,19 @@ export const updateXpFileAction = actionClient
       });
     }
 
+    let pinHash = pinHashFromImageUrl(existing.imageUrl);
+    if (parsedInput.clearPin) {
+      pinHash = null;
+    } else if (parsedInput.pin) {
+      pinHash = await hashPassword(parsedInput.pin);
+    }
+
     await prisma.project.update({
       where: { id: parsedInput.id },
-      data: buildXpFileUpdateData(parsedInput),
+      data: buildXpFileUpdateData({
+        ...parsedInput,
+        pinHash,
+      }),
     });
 
     revalidatePath("/");
@@ -96,4 +110,36 @@ export const deleteXpFileAction = actionClient
     revalidatePath("/admin/xp-files");
 
     return { success: true as const };
+  });
+
+/** Presigned R2 upload — browser PUTs the file directly (no size cap). */
+export const createXpMediaUploadAction = actionClient
+  .inputSchema(xpMediaUploadSchema)
+  .action(async ({ parsedInput }) => {
+    await assertAdmin();
+
+    const result = await createXpMediaUploadUrl(parsedInput);
+    return { success: true as const, ...result };
+  });
+
+/** Public unlock check for XP desktop (PIN never returned to the client). */
+export const verifyXpFilePinAction = actionClient
+  .inputSchema(verifyXpFilePinSchema)
+  .action(async ({ parsedInput }) => {
+    const file = await prisma.project.findFirst({
+      where: { id: parsedInput.id, category: XP_FILE_CATEGORY },
+      select: { imageUrl: true },
+    });
+
+    const hash = file ? pinHashFromImageUrl(file.imageUrl) : null;
+    if (!hash) {
+      return { success: true as const, unlocked: true as const };
+    }
+
+    const ok = await verifyPassword(parsedInput.pin, hash);
+    if (!ok) {
+      return { success: false as const, unlocked: false as const };
+    }
+
+    return { success: true as const, unlocked: true as const };
   });

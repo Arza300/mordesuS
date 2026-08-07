@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <title>Drive Mad</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+        font-family: "Baloo 2", ubuntu, verdana, sans-serif;
+        color: #bbb;
+      }
+      .middle {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        z-index: 10;
+      }
+      #progress_or_play { margin-top: 12px; }
+      .description { font-size: 14px; margin-top: 8px; color: #9ad; }
+      canvas.emscripten {
+        display: block;
+        width: 100%;
+        height: 100%;
+        background: #000;
+      }
+      #gradient {
+        background-image: linear-gradient(135deg, #70e1fd, #00a2ff);
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+      #canvas_border { position: relative; width: 100%; height: 100%; }
+      #webview_content {
+        display: none;
+        position: absolute;
+        inset: 0;
+      }
+      .title { color: #fff; font-size: 22px; font-weight: 800; margin-top: 8px; }
+      .author { color: #cde; font-size: 13px; }
+      .cover-card {
+        width: 148px;
+        margin: 0 auto 8px;
+        background: #cfdaed;
+        box-shadow: 5px 1px 5px rgba(0, 0, 0, 0.25);
+        transform: rotate(-5deg);
+        padding: 4px;
+      }
+      .cover-card .inner {
+        background: #000;
+        padding: 6px;
+      }
+      .cover-emoji {
+        font-size: 64px;
+        line-height: 1;
+        filter: grayscale(0.1);
+      }
+    </style>
+    <script src="https://deckard.openprocessing.org/user485717/visual2458132/hf42bec4b58ab09712c0f3bedb92cada1/index.wasm.js"></script>
+    <script src="https://deckard.openprocessing.org/user485717/visual2458132/hf42bec4b58ab09712c0f3bedb92cada1/index.data.js"></script>
+  </head>
+  <body id="body">
+    <div id="canvas_border" class="emscripten_border">
+      <div id="play_content" class="middle center">
+        <div class="cover-card">
+          <div class="inner">
+            <div class="cover-emoji" aria-hidden="true">🚗</div>
+            <p class="title">Drive Mad</p>
+            <p class="author">jaxkingofpugs</p>
+          </div>
+        </div>
+        <div id="progress_or_play">
+          <progress id="progress" class="loading" value="0" max="100"></progress>
+        </div>
+        <p class="description">Loading…</p>
+      </div>
+      <canvas class="emscripten" id="canvas" tabindex="-1"></canvas>
+      <div id="gradient"></div>
+      <div id="webview_content"></div>
+    </div>
+
+    <script>
+      var GAME_CDN =
+        "https://deckard.openprocessing.org/user485717/visual2458132/hf42bec4b58ab09712c0f3bedb92cada1/";
+
+      var postRunDone = false;
+      var theDomLoaded = false;
+      var pokiInited = true;
+      var gameReadyToStart = false;
+      var requestedCanvas = false;
+      var gameStarted = false;
+      var updatedScreenSize = false;
+      var startupTimeStr = "";
+      var loadProgressFrac = 0;
+      var fakeProgressPercentStart = 80 + Math.random() * 15;
+      var dailyRewardPossible = false;
+      var pokiStopped = true;
+
+      window.addEventListener("DOMContentLoaded", domContentLoaded);
+
+      function domContentLoaded() {
+        var canvas = document.getElementById("canvas");
+        canvas.addEventListener("contextmenu", function (e) {
+          e.preventDefault();
+          return false;
+        });
+        resizeCanvas(false);
+        window.addEventListener("blur", function () {
+          setGameFocus(false);
+        });
+        window.addEventListener("focus", function () {
+          setGameFocus(true);
+        });
+        canvas.onpointerdown = function (e) {
+          canvas.setPointerCapture(e.pointerId);
+        };
+        canvas.onpointerup = function (e) {
+          canvas.releasePointerCapture(e.pointerId);
+        };
+        theDomLoaded = true;
+        tryStartGame();
+      }
+
+      function setGameFocus(f) {
+        if (postRunDone && typeof Module !== "undefined" && Module.ccall) {
+          try {
+            Module.ccall("set_game_focus", "v", ["number"], [f]);
+          } catch (e) {}
+        }
+      }
+
+      function updateLoadProgress() {
+        var progressElement = document.getElementById("progress");
+        if (progressElement) {
+          progressElement.value = Math.round(
+            loadProgressFrac * fakeProgressPercentStart,
+          );
+          progressElement.max = 100;
+        }
+        if (loadProgressFrac >= 1) tryStartGame();
+      }
+
+      function hideOverlayGradient() {
+        var gradient = document.getElementById("gradient");
+        if (gradient) gradient.style.display = "none";
+      }
+
+      function hideOverlay() {
+        var playContent = document.getElementById("play_content");
+        if (playContent) playContent.style.display = "none";
+        hideOverlayGradient();
+      }
+
+      function pokiEnsureStop() {
+        pokiStopped = true;
+      }
+      function pokiEnsureStart() {
+        pokiStopped = false;
+      }
+
+      function startGame() {
+        try {
+          window.addEventListener("beforeunload", function () {
+            Module.ccall("app_terminate_if_necessary", "v");
+          });
+          window.addEventListener("unload", function () {
+            Module.ccall("app_terminate_if_necessary", "v");
+          });
+          document.addEventListener("visibilitychange", function () {
+            if (document.visibilityState === "visible") {
+              Module.ccall("app_resume", "v");
+            } else {
+              Module.ccall("app_pause", "v");
+            }
+          });
+          try {
+            Module.ccall("user_accepted_and_clicked", "v");
+            Module.ccall(
+              "set_is_mobile",
+              "v",
+              ["number"],
+              [matchMedia("(pointer:coarse)").matches],
+            );
+          } catch (err4) {}
+          gameStarted = true;
+          if (!updatedScreenSize) resizeCanvas(true);
+        } catch (err) {
+          console.error("Error starting Drive Mad", err);
+        }
+      }
+
+      var startGameAttempts = 0;
+      var tryStartGameTimeout = null;
+      function tryStartGame() {
+        if (gameReadyToStart) return;
+        if (!postRunDone || !theDomLoaded || !pokiInited) {
+          startGameAttempts++;
+          if (startGameAttempts >= 40) return;
+          if (tryStartGameTimeout) clearTimeout(tryStartGameTimeout);
+          tryStartGameTimeout = setTimeout(
+            tryStartGame,
+            startGameAttempts * 100,
+          );
+          return;
+        }
+        gameReadyToStart = true;
+        startGame();
+      }
+
+      function resizeCanvas(informC) {
+        var iw = window.innerWidth;
+        var ih = window.innerHeight;
+        var canvas = document.getElementById("canvas");
+        var border = document.getElementById("canvas_border");
+        if (!canvas || !border) return;
+        canvas.width = iw * window.devicePixelRatio;
+        canvas.height = ih * window.devicePixelRatio;
+        border.style.marginTop = "0px";
+        var gradient = document.getElementById("gradient");
+        var webViewContent = document.getElementById("webview_content");
+        [gradient, webViewContent].forEach(function (e) {
+          if (e) e.style.left = "0px";
+        });
+        [canvas, gradient, webViewContent].forEach(function (e) {
+          if (e) {
+            e.style.width = iw + "px";
+            e.style.height = ih + "px";
+          }
+        });
+        if (
+          informC &&
+          gameStarted &&
+          requestedCanvas &&
+          Module &&
+          Module.ccall
+        ) {
+          Module.ccall(
+            "update_screen_size",
+            "v",
+            ["number", "number", "number"],
+            [canvas.width, canvas.height, window.devicePixelRatio],
+          );
+          updatedScreenSize = true;
+        }
+      }
+
+      function getHostname() {
+        var hostname = window.location.hostname.split(":")[0];
+        var lengthBytes = lengthBytesUTF8(hostname) + 1;
+        var stringOnWasmHeap = _malloc(lengthBytes);
+        stringToUTF8(hostname, stringOnWasmHeap, lengthBytes);
+        return stringOnWasmHeap;
+      }
+
+      function getUrlLevelIndex() {
+        return 0;
+      }
+      function setDeepLinkLoadingFraction() {}
+      function firebaseSignout() {}
+      function downloadFileInBrowser() {}
+      function fetchUrl() {}
+      function showShareFileModal() {}
+      function showStoreLinkModal() {}
+      function webViewOpen() {}
+      function webViewClose() {}
+      function webViewExecuteJS() {}
+      function checkHintFileExist() {}
+
+      function adInit() {
+        setTimeout(function () {
+          Module.ccall("ad_on_inited", "v");
+        }, 100);
+      }
+      function adInterstitialLoad() {
+        setTimeout(function () {
+          Module.ccall("ad_interstitial_on_loaded", "v", ["number"], [1]);
+        }, 100);
+      }
+      function adInterstitialShow() {
+        Module.ccall("ad_interstitial_on_showed", "v", ["number"], [1]);
+      }
+      function adRewardedLoad() {
+        setTimeout(function () {
+          Module.ccall("ad_rewarded_on_loaded", "v", ["number"], [1]);
+        }, 100);
+      }
+      function adRewardedShow() {
+        pokiEnsureStop();
+        Module.ccall("ad_rewarded_on_reward", "v");
+        Module.ccall("ad_rewarded_on_showed", "v", ["number"], [true]);
+      }
+
+      function resolveGameAsset(path) {
+        if (path === "index.wasm" || path.endsWith(".wasm")) {
+          return typeof window["index.wasm"] === "string"
+            ? window["index.wasm"]
+            : GAME_CDN + "index.wasm";
+        }
+        if (path === "index.data" || path.endsWith(".data")) {
+          return typeof window["index.data"] === "string"
+            ? window["index.data"]
+            : GAME_CDN + "index.data";
+        }
+        return GAME_CDN + path;
+      }
+
+      var Module = {
+        locateFile: function (path) {
+          return resolveGameAsset(path);
+        },
+        preRun: [
+          function () {
+            console.log("Drive Mad preRun");
+          },
+        ],
+        postRun: [
+          function () {
+            document.onfullscreenchange = function () {
+              setTimeout(function () {
+                resizeCanvas(true);
+              }, 500);
+            };
+            window.addEventListener("resize", function () {
+              resizeCanvas(true);
+            });
+            if (theDomLoaded) resizeCanvas(true);
+            window.addEventListener("keydown", function (e) {
+              if (typeof ccall === "function") {
+                ccall("keydown_browser", "v", ["string"], [e.key]);
+              }
+            });
+            postRunDone = true;
+            tryStartGame();
+          },
+        ],
+        print: function (text) {
+          console.log(text);
+        },
+        printErr: function (text) {
+          console.error(text);
+        },
+        canvas: (function () {
+          var canvas = document.getElementById("canvas");
+          canvas.addEventListener(
+            "webglcontextlost",
+            function (e) {
+              alert("WebGL context lost. Reload the page.");
+              e.preventDefault();
+            },
+            false,
+          );
+          requestedCanvas = true;
+          return canvas;
+        })(),
+        setStatus: function (text) {
+          if (!Module.setStatus.last)
+            Module.setStatus.last = { time: Date.now(), text: "" };
+          if (text === Module.setStatus.last.text) return;
+          var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+          var now = Date.now();
+          if (m && now - Module.setStatus.last.time < 30) return;
+          Module.setStatus.last.time = now;
+          Module.setStatus.last.text = text;
+          if (m) {
+            loadProgressFrac = parseInt(m[2], 10) / parseInt(m[4], 10);
+          } else {
+            loadProgressFrac = 1;
+          }
+          updateLoadProgress();
+        },
+        totalDependencies: 0,
+        monitorRunDependencies: function (left) {
+          this.totalDependencies = Math.max(this.totalDependencies, left);
+        },
+      };
+    </script>
+    <script src="https://deckard.openprocessing.org/user485717/visual2458132/hf42bec4b58ab09712c0f3bedb92cada1/index.js"></script>
+  </body>
+</html>

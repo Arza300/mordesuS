@@ -1,0 +1,3 @@
+﻿# Keep folders; never commit dumps
+*
+!.gitignore

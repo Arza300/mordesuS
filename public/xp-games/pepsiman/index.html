@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <title>Pepsiman</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+      }
+
+      #game {
+        width: 100%;
+        height: 100%;
+      }
+
+      /* Crop oldgames.app chrome — show only the emulator stage. */
+      #crop {
+        display: none;
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+      }
+
+      #crop iframe {
+        position: absolute;
+        border: 0;
+        /* Wider than viewport to push the right sidebar off-screen */
+        width: calc(100% + 360px);
+        /* Taller so we can scroll the player into the crop */
+        height: calc(100% + 420px);
+        left: 0;
+        top: -300px;
+        pointer-events: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <div id="crop">
+      <iframe
+        id="og"
+        title="Pepsiman"
+        src="https://oldgames.app/ar/games/ps1/pepsiman-japan-ps1-9465"
+        allow="fullscreen; gamepad; autoplay; autoplay"
+        referrerpolicy="no-referrer-when-downgrade"
+      ></iframe>
+    </div>
+    <script>
+      (async function () {
+        const gameUrl = "/xp-games/pepsiman/rom/pepsiman-jp.7z";
+        const biosUrl = "/xp-games/pepsiman/bios/scph5500.bin";
+
+        async function exists(url) {
+          try {
+            const res = await fetch(url, { method: "HEAD", cache: "no-store" });
+            return res.ok;
+          } catch {
+            return false;
+          }
+        }
+
+        // Prefer a local disc image → true game-only EmulatorJS (no site chrome).
+        if (await exists(gameUrl)) {
+          window.EJS_player = "#game";
+          window.EJS_core = "psx";
+          window.EJS_gameName = "Pepsiman";
+          window.EJS_color = "#004B93";
+          window.EJS_startOnLoaded = true;
+          window.EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
+          window.EJS_gameUrl = gameUrl;
+          window.EJS_biosUrl = (await exists(biosUrl)) ? biosUrl : "";
+          window.EJS_Buttons = {
+            playPause: true,
+            restart: true,
+            mute: true,
+            settings: true,
+            fullscreen: true,
+            saveState: true,
+            loadState: true,
+            screenRecord: false,
+            gamepad: true,
+            cheat: false,
+            volume: true,
+            saveSavFiles: true,
+            loadSavFiles: true,
+            quickSave: true,
+            quickLoad: true,
+            screenshot: false,
+            cacheManager: false,
+            exitEmulation: false,
+          };
+          const script = document.createElement("script");
+          script.src = "https://cdn.emulatorjs.org/stable/data/loader.js";
+          document.body.appendChild(script);
+          return;
+        }
+
+        // Fallback: embed oldgames once, CSS-crop to the player region only.
+        document.getElementById("game").style.display = "none";
+        document.getElementById("crop").style.display = "block";
+      })();
+    </script>
+  </body>
+</html>

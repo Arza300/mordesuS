@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import {
   createXpFileAction,
+  createXpMediaUploadAction,
   deleteXpFileAction,
   updateXpFileAction,
 } from "@/actions/xp-files";
@@ -16,14 +17,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { XpFileData, XpIconId, XpOpenMode } from "@/types/xp-file";
+import { resolveMediaSource } from "@/lib/media-url";
 import { cn } from "@/lib/utils";
 
 type XpFileEditorProps = {
   file: XpFileData;
 };
 
+const OPEN_MODE_OPTIONS: { id: XpOpenMode; label: string }[] = [
+  { id: "script", label: "Script" },
+  { id: "link", label: "Direct link" },
+  { id: "image", label: "Image" },
+  { id: "video", label: "Video" },
+];
+
 export function XpFileEditor({ file }: XpFileEditorProps) {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(file.name);
   const [lang, setLang] = useState(file.lang);
   const [content, setContent] = useState(file.content);
@@ -31,8 +41,26 @@ export function XpFileEditor({ file }: XpFileEditorProps) {
   const [sortOrder, setSortOrder] = useState(file.sortOrder);
   const [href, setHref] = useState(file.href ?? "");
   const [openMode, setOpenMode] = useState<XpOpenMode>(file.openMode);
+  const [pin, setPin] = useState("");
+  const [clearPin, setClearPin] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [uploading, setUploading] = useState(false);
+  const [uploadPct, setUploadPct] = useState<number | null>(null);
+
+  const isMedia = openMode === "image" || openMode === "video";
+
+  const setMode = (mode: XpOpenMode) => {
+    setOpenMode(mode);
+    if (mode === "image" && (icon === "txt" || icon === "html")) {
+      setIcon("image");
+      setLang("Image");
+    }
+    if (mode === "video" && (icon === "txt" || icon === "html")) {
+      setIcon("video");
+      setLang("Video");
+    }
+  };
 
   const save = () => {
     setError(null);
@@ -46,16 +74,25 @@ export function XpFileEditor({ file }: XpFileEditorProps) {
         sortOrder,
         href,
         openMode,
+        pin: clearPin ? "" : pin,
+        clearPin,
       });
       if (result?.serverError) {
         setError(result.serverError);
         return;
       }
       if (result?.validationErrors) {
+        const pinErrors = result.validationErrors.pin?._errors;
         const hrefErrors = result.validationErrors.href?._errors;
-        setError(hrefErrors?.[0] ?? "Check the fields and try again.");
+        setError(
+          pinErrors?.[0] ??
+            hrefErrors?.[0] ??
+            "Check the fields and try again.",
+        );
         return;
       }
+      setPin("");
+      setClearPin(false);
       toast.success("File saved");
       router.refresh();
     });
@@ -73,6 +110,68 @@ export function XpFileEditor({ file }: XpFileEditorProps) {
       toast.success("File deleted");
       router.refresh();
     });
+  };
+
+  const uploadMedia = async (selected: File) => {
+    if (openMode !== "image" && openMode !== "video") return;
+    setError(null);
+    setUploading(true);
+    setUploadPct(0);
+
+    try {
+      const signed = await createXpMediaUploadAction({
+        kind: openMode,
+        contentType: selected.type || "application/octet-stream",
+        filename: selected.name,
+      });
+
+      if (signed?.serverError) {
+        throw new Error(signed.serverError);
+      }
+      if (!signed?.data?.uploadUrl || !signed.data.publicUrl) {
+        throw new Error("Could not start upload.");
+      }
+
+      const { uploadUrl, publicUrl } = signed.data;
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", uploadUrl);
+        xhr.setRequestHeader(
+          "Content-Type",
+          selected.type || "application/octet-stream",
+        );
+        xhr.upload.onprogress = (event) => {
+          if (!event.lengthComputable) return;
+          setUploadPct(Math.round((event.loaded / event.total) * 100));
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else
+            reject(
+              new Error(
+                `Upload failed (${xhr.status}). Check R2 CORS allows PUT from this origin.`,
+              ),
+            );
+        };
+        xhr.onerror = () =>
+          reject(
+            new Error(
+              "Upload failed. Check R2 CORS allows PUT from this origin.",
+            ),
+          );
+        xhr.send(selected);
+      });
+
+      setHref(publicUrl);
+      setUploadPct(100);
+      toast.success("Media uploaded — click Save to keep it");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   return (
@@ -136,55 +235,180 @@ export function XpFileEditor({ file }: XpFileEditorProps) {
             onChange={(e) => setSortOrder(Number(e.target.value) || 0)}
           />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2 sm:col-span-2">
           <Label>Open as</Label>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setOpenMode("script")}
-              className={cn(
-                "flex-1 rounded-lg border px-3 py-2 text-sm transition-colors",
-                openMode === "script"
-                  ? "border-white/50 bg-white/10"
-                  : "border-white/10 hover:border-white/25",
-              )}
-            >
-              Script
-            </button>
-            <button
-              type="button"
-              onClick={() => setOpenMode("link")}
-              className={cn(
-                "flex-1 rounded-lg border px-3 py-2 text-sm transition-colors",
-                openMode === "link"
-                  ? "border-white/50 bg-white/10"
-                  : "border-white/10 hover:border-white/25",
-              )}
-            >
-              Direct link
-            </button>
+          <div className="flex flex-wrap gap-2">
+            {OPEN_MODE_OPTIONS.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setMode(opt.id)}
+                className={cn(
+                  "rounded-lg border px-3 py-2 text-sm transition-colors",
+                  openMode === opt.id
+                    ? "border-white/50 bg-white/10"
+                    : "border-white/10 hover:border-white/25",
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor={`pin-${file.id}`}>
+            Numeric password (PIN)
+            {file.locked ? " — currently protected" : ""}
+          </Label>
+          <Input
+            id={`pin-${file.id}`}
+            type="password"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder={
+              file.locked
+                ? "Enter new PIN to replace (4–12 digits)"
+                : "Optional — 4–12 digits"
+            }
+            value={pin}
+            disabled={clearPin}
+            onChange={(e) =>
+              setPin(e.target.value.replace(/\D/g, "").slice(0, 12))
+            }
+          />
+          <div className="flex flex-wrap items-center gap-3">
+            {file.locked ? (
+              <label className="flex items-center gap-2 text-xs text-white/50">
+                <input
+                  type="checkbox"
+                  checked={clearPin}
+                  onChange={(e) => {
+                    setClearPin(e.target.checked);
+                    if (e.target.checked) setPin("");
+                  }}
+                />
+                Remove password
+              </label>
+            ) : null}
+            <p className="text-xs text-white/40">
+              Visitors must enter this PIN in an XP password dialog before the
+              file opens.
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor={`href-${file.id}`}>
-          Link {openMode === "link" ? "(required)" : "(optional)"}
-        </Label>
-        <Input
-          id={`href-${file.id}`}
-          type="url"
-          placeholder="https://example.com"
-          value={href}
-          onChange={(e) => setHref(e.target.value)}
-        />
-        {openMode === "link" ? (
-          <p className="text-xs text-white/40">
-            Opens in a real browser window so login and cookies work like a
-            normal Chrome tab (iframes block sign-in on most sites).
-          </p>
-        ) : null}
-      </div>
+      {openMode === "link" || isMedia ? (
+        <div className="space-y-2">
+          <Label htmlFor={`href-${file.id}`}>
+            {isMedia
+              ? `${openMode === "image" ? "Image" : "Video"} URL`
+              : "Link"}{" "}
+            (required)
+          </Label>
+          <Input
+            id={`href-${file.id}`}
+            type="url"
+            placeholder={
+              isMedia
+                ? "Upload below or paste a public URL"
+                : "https://example.com"
+            }
+            value={href}
+            onChange={(e) => setHref(e.target.value)}
+          />
+          {openMode === "link" ? (
+            <p className="text-xs text-white/40">
+              Opens in a real browser window so login and cookies work like a
+              normal Chrome tab.
+            </p>
+          ) : isMedia ? (
+            <p className="text-xs text-white/40">
+              Google Drive share links work — the file must be set to Anyone
+              with the link.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {isMedia ? (
+        <div className="space-y-2">
+          <Label>Upload {openMode} (any size)</Label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            accept={
+              openMode === "image"
+                ? "image/jpeg,image/png,image/webp,image/gif,image/bmp,image/svg+xml"
+                : "video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo,video/x-matroska,.mp4,.webm,.mov,.avi,.mkv"
+            }
+            onChange={(e) => {
+              const selected = e.target.files?.[0];
+              if (selected) void uploadMedia(selected);
+            }}
+          />
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={uploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {uploading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Upload className="size-4" />
+              )}
+              {uploading
+                ? uploadPct != null
+                  ? `Uploading ${uploadPct}%`
+                  : "Uploading…"
+                : `Choose ${openMode}`}
+            </Button>
+            <p className="text-xs text-white/40">
+              Uploads go straight to storage — no size limit.
+            </p>
+          </div>
+          {href && (openMode === "image" || openMode === "video") ? (
+            <div className="overflow-hidden rounded-lg border border-white/10 bg-black/40 p-2">
+              {(() => {
+                const resolved = resolveMediaSource(href, openMode);
+                if (openMode === "video" && resolved.kind === "drive-embed") {
+                  return (
+                    <iframe
+                      src={resolved.src}
+                      title={name}
+                      className="h-40 w-full border-0"
+                      allow="autoplay; encrypted-media"
+                      allowFullScreen
+                    />
+                  );
+                }
+                if (openMode === "image") {
+                  return (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={resolved.src}
+                      alt={name}
+                      className="max-h-40 w-auto max-w-full object-contain"
+                    />
+                  );
+                }
+                return (
+                  <video
+                    src={resolved.src}
+                    className="max-h-40 w-auto max-w-full"
+                    controls
+                    preload="metadata"
+                  />
+                );
+              })()}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="space-y-2">
         <Label>Icon</Label>
@@ -210,19 +434,19 @@ export function XpFileEditor({ file }: XpFileEditorProps) {
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor={`content-${file.id}`}>
-          Contents {openMode === "link" ? "(hidden when opened as link)" : ""}
-        </Label>
-        <textarea
-          id={`content-${file.id}`}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          spellCheck={false}
-          rows={12}
-          className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 font-mono text-xs leading-relaxed text-white/90 outline-none focus:border-white/30"
-        />
-      </div>
+      {openMode === "script" ? (
+        <div className="space-y-2">
+          <Label htmlFor={`content-${file.id}`}>Contents</Label>
+          <textarea
+            id={`content-${file.id}`}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            spellCheck={false}
+            rows={12}
+            className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 font-mono text-xs leading-relaxed text-white/90 outline-none focus:border-white/30"
+          />
+        </div>
+      ) : null}
     </article>
   );
 }

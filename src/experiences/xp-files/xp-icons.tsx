@@ -85,6 +85,87 @@ export function XpFileGlyph({ icon }: GlyphProps) {
           <path d="M16 44l10-8 8 6 8-10 6 12H16z" fill="#4CAF50" />
         </DocShell>
       );
+    case "photo":
+      return (
+        <svg viewBox="0 0 64 64" aria-hidden className="h-full w-full">
+          <rect
+            x="8"
+            y="16"
+            width="48"
+            height="36"
+            rx="4"
+            fill="#F5F5F5"
+            stroke="#757575"
+            strokeWidth="1.5"
+          />
+          <rect x="14" y="22" width="36" height="24" fill="#90CAF9" />
+          <circle cx="24" cy="30" r="3.5" fill="#FFF59D" />
+          <path d="M14 42l9-7 7 5 7-9 13 11H14z" fill="#43A047" />
+          <circle
+            cx="46"
+            cy="18"
+            r="7"
+            fill="#424242"
+            stroke="#212121"
+            strokeWidth="1"
+          />
+          <circle cx="46" cy="18" r="3.5" fill="#90A4AE" />
+        </svg>
+      );
+    case "video":
+      return (
+        <svg viewBox="0 0 64 64" aria-hidden className="h-full w-full">
+          <rect
+            x="6"
+            y="12"
+            width="52"
+            height="40"
+            rx="3"
+            fill="#1A237E"
+            stroke="#0D47A1"
+            strokeWidth="1.5"
+          />
+          <rect x="10" y="16" width="36" height="28" fill="#000" />
+          <path d="M22 22l14 8-14 8V22z" fill="#FF9800" />
+          <rect x="48" y="18" width="6" height="8" rx="1" fill="#FF5722" />
+          <rect x="48" y="30" width="6" height="8" rx="1" fill="#4CAF50" />
+          <text
+            x="28"
+            y="52"
+            fontSize="7"
+            fontFamily="Tahoma, Arial"
+            fill="#90CAF9"
+            textAnchor="middle"
+          >
+            WMP
+          </text>
+        </svg>
+      );
+    case "film":
+      return (
+        <svg viewBox="0 0 64 64" aria-hidden className="h-full w-full">
+          <rect
+            x="10"
+            y="8"
+            width="44"
+            height="48"
+            rx="2"
+            fill="#37474F"
+            stroke="#263238"
+            strokeWidth="1.5"
+          />
+          <rect x="14" y="12" width="6" height="5" fill="#ECEFF1" />
+          <rect x="14" y="22" width="6" height="5" fill="#ECEFF1" />
+          <rect x="14" y="32" width="6" height="5" fill="#ECEFF1" />
+          <rect x="14" y="42" width="6" height="5" fill="#ECEFF1" />
+          <rect x="44" y="12" width="6" height="5" fill="#ECEFF1" />
+          <rect x="44" y="22" width="6" height="5" fill="#ECEFF1" />
+          <rect x="44" y="32" width="6" height="5" fill="#ECEFF1" />
+          <rect x="44" y="42" width="6" height="5" fill="#ECEFF1" />
+          <rect x="24" y="14" width="16" height="36" fill="#1565C0" />
+          <path d="M28 26l10 6-10 6V26z" fill="#FFE082" />
+        </svg>
+      );
     case "code":
       return (
         <DocShell>
@@ -143,6 +224,9 @@ export const XP_ICON_OPTIONS: { id: XpIconId; label: string }[] = [
   { id: "js", label: "JavaScript" },
   { id: "txt", label: "Text" },
   { id: "image", label: "Image" },
+  { id: "photo", label: "Photo" },
+  { id: "video", label: "Video" },
+  { id: "film", label: "Film" },
   { id: "code", label: "Code" },
   { id: "doc", label: "Document" },
   { id: "music", label: "Music" },

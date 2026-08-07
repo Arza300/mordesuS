@@ -4,6 +4,9 @@ export const XP_ICON_IDS = [
   "js",
   "txt",
   "image",
+  "photo",
+  "video",
+  "film",
   "code",
   "doc",
   "music",
@@ -14,11 +17,15 @@ export type XpIconId = (typeof XP_ICON_IDS)[number];
 /** Reserved Project.category — excluded from portfolio listings. */
 export const XP_FILE_CATEGORY = "__xp_file__";
 
-/** Stored in Project.imageUrl for XP file rows. */
+/** Stored in Project.imageUrl for XP file rows (optionally `base||bcryptHash`). */
 export const XP_FILE_IMAGE_URL = "xp-file";
 export const XP_FILE_LINK_IMAGE_URL = "xp-file-link";
+export const XP_FILE_MEDIA_IMAGE_URL = "xp-file-image";
+export const XP_FILE_VIDEO_IMAGE_URL = "xp-file-video";
 
-export const XP_OPEN_MODES = ["script", "link"] as const;
+const XP_PIN_SEP = "||";
+
+export const XP_OPEN_MODES = ["script", "link", "image", "video"] as const;
 export type XpOpenMode = (typeof XP_OPEN_MODES)[number];
 
 export type XpFileData = {
@@ -29,10 +36,11 @@ export type XpFileData = {
   content: string;
   icon: XpIconId;
   sortOrder: number;
-  /** Optional external URL when openMode is "link". */
+  /** URL for link / image / video modes. */
   href: string | null;
-  /** "script" = show contents; "link" = embed href in the XP window. */
   openMode: XpOpenMode;
+  /** True when a numeric unlock PIN is set (PIN itself is never sent to the client). */
+  locked: boolean;
 };
 
 export function isXpIconId(value: string): value is XpIconId {
@@ -43,10 +51,48 @@ export function normalizeXpIcon(value: string): XpIconId {
   return isXpIconId(value) ? value : "txt";
 }
 
-export function imageUrlForOpenMode(mode: XpOpenMode): string {
-  return mode === "link" ? XP_FILE_LINK_IMAGE_URL : XP_FILE_IMAGE_URL;
+function modeToken(mode: XpOpenMode): string {
+  switch (mode) {
+    case "link":
+      return XP_FILE_LINK_IMAGE_URL;
+    case "image":
+      return XP_FILE_MEDIA_IMAGE_URL;
+    case "video":
+      return XP_FILE_VIDEO_IMAGE_URL;
+    default:
+      return XP_FILE_IMAGE_URL;
+  }
+}
+
+export function imageUrlForOpenMode(
+  mode: XpOpenMode,
+  pinHash?: string | null,
+): string {
+  const base = modeToken(mode);
+  return pinHash ? `${base}${XP_PIN_SEP}${pinHash}` : base;
 }
 
 export function openModeFromImageUrl(imageUrl: string): XpOpenMode {
-  return imageUrl === XP_FILE_LINK_IMAGE_URL ? "link" : "script";
+  const base = imageUrl.split(XP_PIN_SEP)[0] ?? imageUrl;
+  switch (base) {
+    case XP_FILE_LINK_IMAGE_URL:
+      return "link";
+    case XP_FILE_MEDIA_IMAGE_URL:
+      return "image";
+    case XP_FILE_VIDEO_IMAGE_URL:
+      return "video";
+    default:
+      return "script";
+  }
+}
+
+export function pinHashFromImageUrl(imageUrl: string): string | null {
+  const sep = imageUrl.indexOf(XP_PIN_SEP);
+  if (sep === -1) return null;
+  const hash = imageUrl.slice(sep + XP_PIN_SEP.length);
+  return hash.length > 0 ? hash : null;
+}
+
+export function openModeNeedsHref(mode: XpOpenMode): boolean {
+  return mode === "link" || mode === "image" || mode === "video";
 }

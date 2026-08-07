@@ -15,4 +15,6 @@ export {
   createXpFileAction,
   updateXpFileAction,
   deleteXpFileAction,
+  createXpMediaUploadAction,
+  verifyXpFilePinAction,
 } from "@/actions/xp-files";
