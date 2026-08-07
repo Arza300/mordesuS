@@ -310,6 +310,18 @@ function PepsimanIcon() {
   );
 }
 
+function SpiderManIcon() {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      className="desk-svg desk-img-icon"
+      src="/xp-games/spider-man/icon.png"
+      alt=""
+      draggable={false}
+    />
+  );
+}
+
 const XP_GAMES = [
   {
     id: "drive-mad",
@@ -334,6 +346,12 @@ const XP_GAMES = [
     name: "Pepsiman",
     href: "/xp-games/pepsiman/index.html",
     Icon: PepsimanIcon,
+  },
+  {
+    id: "spider-man",
+    name: "Spider-Man",
+    href: "/xp-games/spider-man/index.html",
+    Icon: SpiderManIcon,
   },
 ] as const;
 
