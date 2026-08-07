@@ -18,6 +18,7 @@ import {
   XpVideoPlayer,
 } from "@/experiences/xp-files/xp-video-player";
 import { verifyXpFilePinAction } from "@/actions/xp-files";
+import { playWindowsXpClickSound } from "@/lib/windows-xp-startup-sound";
 import type { XpFileData } from "@/types/xp-file";
 import { cn } from "@/lib/utils";
 
@@ -1138,6 +1139,13 @@ export function XpDesktop({
       role="dialog"
       aria-label="Windows XP files easter egg"
       onPointerDown={(e) => {
+        if (e.button === 0) {
+          const t = e.target as HTMLElement;
+          // Skip game iframes / media controls — keep XP chrome clicks only.
+          if (!t.closest(".game-frame, .xp-media-player, iframe")) {
+            void playWindowsXpClickSound();
+          }
+        }
         if (
           startMenuOpen &&
           !(e.target as HTMLElement).closest(".xp-start-menu, .xp-start-btn")

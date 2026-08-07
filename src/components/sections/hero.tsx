@@ -29,7 +29,10 @@ import {
   playLogoExplodeSound,
   playLogoReassembleSound,
 } from "@/lib/logo-explode-sound";
-import { playWindowsXpStartupSound } from "@/lib/windows-xp-startup-sound";
+import {
+  playWindowsXpShutdownSound,
+  playWindowsXpStartupSound,
+} from "@/lib/windows-xp-startup-sound";
 import { useLenis } from "@/providers/smooth-scroll-provider";
 import { useProjectsOverlayStore } from "@/stores/projects-overlay-store";
 import { useUiStore } from "@/stores/ui-store";
@@ -260,7 +263,7 @@ export function HeroSection({ projects, xpFiles }: HeroSectionProps) {
   };
 
   const handleCloseXp = () => {
-    void playLogoReassembleSound();
+    void playWindowsXpShutdownSound();
     setXpOpen(false);
     setXpDesktopOpen(false);
   };

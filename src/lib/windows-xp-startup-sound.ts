@@ -1,97 +1,87 @@
 "use client";
 
-const SILENT = 0.0001;
+const STARTUP_SOUND_URL = "/sounds/windows-xp-startup.wav";
+const CLICK_SOUND_URL = "/sounds/windows-xp-click.wav";
+const SHUTDOWN_SOUND_URL = "/sounds/windows-xp-shutdown.wav";
 
-let sharedCtx: AudioContext | null = null;
+let startupAudio: HTMLAudioElement | null = null;
+let clickAudio: HTMLAudioElement | null = null;
+let shutdownAudio: HTMLAudioElement | null = null;
+let lastClickAt = 0;
 
-async function getAudioContext() {
-  if (typeof window === "undefined") return null;
-  if (!sharedCtx) sharedCtx = new AudioContext();
-  if (sharedCtx.state === "suspended") {
-    await sharedCtx.resume();
-  }
-  return sharedCtx;
+function stopAudio(audio: HTMLAudioElement | null) {
+  if (!audio) return;
+  audio.pause();
+  audio.currentTime = 0;
 }
 
 /**
- * Soft ascending chime inspired by classic Windows XP startup.
+ * Authentic Windows XP startup chime from the bundled WAV.
  */
 export async function playWindowsXpStartupSound() {
-  const ctx = await getAudioContext();
-  if (!ctx) return;
+  if (typeof window === "undefined") return;
 
-  const now = ctx.currentTime;
-  const master = ctx.createGain();
-  master.gain.value = SILENT;
-  master.connect(ctx.destination);
+  stopAudio(shutdownAudio);
 
-  master.gain.setValueAtTime(SILENT, now);
-  master.gain.exponentialRampToValueAtTime(0.55, now + 0.08);
-  master.gain.exponentialRampToValueAtTime(0.32, now + 1.2);
-  master.gain.exponentialRampToValueAtTime(SILENT, now + 3.2);
+  if (!startupAudio) {
+    startupAudio = new Audio(STARTUP_SOUND_URL);
+    startupAudio.preload = "auto";
+  }
 
-  // Warm pad under the chime
-  const pad = ctx.createOscillator();
-  pad.type = "sine";
-  pad.frequency.value = 147; // D3
-  const padGain = ctx.createGain();
-  padGain.gain.setValueAtTime(SILENT, now);
-  padGain.gain.exponentialRampToValueAtTime(0.18, now + 0.35);
-  padGain.gain.exponentialRampToValueAtTime(SILENT, now + 2.8);
-  const padFilter = ctx.createBiquadFilter();
-  padFilter.type = "lowpass";
-  padFilter.frequency.value = 900;
-  pad.connect(padFilter);
-  padFilter.connect(padGain);
-  padGain.connect(master);
-  pad.start(now);
-  pad.stop(now + 2.9);
+  try {
+    startupAudio.pause();
+    startupAudio.currentTime = 0;
+    startupAudio.volume = 0.22;
+    await startupAudio.play();
+  } catch {
+    // Autoplay may be blocked until a user gesture; caller already runs on open.
+  }
+}
 
-  // Classic-feeling rising chord hits
-  const notes = [
-    { freq: 294, delay: 0.0, dur: 1.6, gain: 0.22 }, // D4
-    { freq: 370, delay: 0.22, dur: 1.55, gain: 0.2 }, // F#4
-    { freq: 440, delay: 0.44, dur: 1.7, gain: 0.22 }, // A4
-    { freq: 587, delay: 0.72, dur: 2.0, gain: 0.26 }, // D5
-  ];
+/**
+ * UI click from the bundled mouse-click WAV.
+ */
+export async function playWindowsXpClickSound() {
+  if (typeof window === "undefined") return;
 
-  for (const note of notes) {
-    const osc = ctx.createOscillator();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(note.freq, now + note.delay);
+  const nowMs = performance.now();
+  if (nowMs - lastClickAt < 50) return;
+  lastClickAt = nowMs;
 
-    const shimmer = ctx.createOscillator();
-    shimmer.type = "triangle";
-    shimmer.frequency.setValueAtTime(note.freq * 2, now + note.delay);
+  if (!clickAudio) {
+    clickAudio = new Audio(CLICK_SOUND_URL);
+    clickAudio.preload = "auto";
+  }
 
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(SILENT, now + note.delay);
-    g.gain.exponentialRampToValueAtTime(note.gain, now + note.delay + 0.06);
-    g.gain.exponentialRampToValueAtTime(
-      note.gain * 0.45,
-      now + note.delay + 0.55,
-    );
-    g.gain.exponentialRampToValueAtTime(SILENT, now + note.delay + note.dur);
+  try {
+    clickAudio.pause();
+    clickAudio.currentTime = 0;
+    clickAudio.volume = 0.4;
+    await clickAudio.play();
+  } catch {
+    // Ignore play failures (e.g. interrupted by another click).
+  }
+}
 
-    const sg = ctx.createGain();
-    sg.gain.setValueAtTime(SILENT, now + note.delay);
-    sg.gain.exponentialRampToValueAtTime(
-      note.gain * 0.12,
-      now + note.delay + 0.08,
-    );
-    sg.gain.exponentialRampToValueAtTime(
-      SILENT,
-      now + note.delay + note.dur * 0.85,
-    );
+/**
+ * Authentic Windows XP shutdown sound from the bundled WAV.
+ */
+export async function playWindowsXpShutdownSound() {
+  if (typeof window === "undefined") return;
 
-    osc.connect(g);
-    g.connect(master);
-    shimmer.connect(sg);
-    sg.connect(master);
+  stopAudio(startupAudio);
 
-    osc.start(now + note.delay);
-    osc.stop(now + note.delay + note.dur + 0.05);
-    shimmer.start(now + note.delay);
-    shimmer.stop(now + note.delay + note.dur + 0.05);
+  if (!shutdownAudio) {
+    shutdownAudio = new Audio(SHUTDOWN_SOUND_URL);
+    shutdownAudio.preload = "auto";
+  }
+
+  try {
+    shutdownAudio.pause();
+    shutdownAudio.currentTime = 0;
+    shutdownAudio.volume = 0.22;
+    await shutdownAudio.play();
+  } catch {
+    // Ignore play failures.
   }
 }
