@@ -1,9 +1,12 @@
+/** Canonical production origin for SEO, Open Graph, and structured data. */
+export const SITE_URL = "https://mordesu.tech" as const;
+
 export const siteConfig = {
   name: "Mordesu Studio",
   shortName: "Mordesu",
   description:
     "Mordesu Studio designs and builds high-performance web products for ambitious brands — blending cinematic craft with engineering precision.",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  url: SITE_URL,
   ogImage: "/og.svg",
   links: {
     twitter: "https://twitter.com/mordesu",

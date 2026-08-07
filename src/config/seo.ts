@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 
-import { siteConfig } from "@/config/site";
+import { SITE_URL, siteConfig } from "@/config/site";
 
 const defaultTitle = "Mordesu Studio | Web Design & Development Studio";
 const defaultDescription =
   "Mordesu Studio designs and develops high-performance websites, e-commerce solutions, educational platforms, and custom web applications for businesses and creators.";
 
 export const defaultMetadata: Metadata = {
-  metadataBase: new URL(siteConfig.url),
+  metadataBase: new URL("https://mordesu.tech"),
   title: {
     default: defaultTitle,
     template: `%s | ${siteConfig.name}`,
@@ -32,7 +32,7 @@ export const defaultMetadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: siteConfig.url,
+    url: SITE_URL,
     title: defaultTitle,
     description: defaultDescription,
     siteName: siteConfig.name,
@@ -57,6 +57,6 @@ export const defaultMetadata: Metadata = {
     follow: true,
   },
   alternates: {
-    canonical: siteConfig.url,
+    canonical: SITE_URL,
   },
 };
