@@ -38,6 +38,12 @@
   cursor: pointer;
   text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.35);
   box-shadow: 2px 3px 10px rgba(0, 0, 0, 0.35);
+  transition: top 0.15s ease;
+}
+
+.xp-desktop.has-maximized .xp-back {
+  top: 44px;
+  z-index: 220;
 }
 
 .xp-desktop .xp-back:hover {
@@ -273,6 +279,16 @@
   overflow: hidden;
 }
 
+.xp-desktop .xp-window.is-maximized {
+  left: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  height: calc(100% - 40px) !important;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 .xp-desktop .main-window {
   width: min(780px, calc(100vw - 24px));
   height: min(600px, calc(100dvh - 72px));
@@ -344,6 +360,11 @@
 
 .xp-desktop .win-btn:hover {
   filter: brightness(1.15);
+}
+
+.xp-desktop .win-btn.max {
+  font-size: 11px;
+  line-height: 1;
 }
 
 .xp-desktop .menubar {

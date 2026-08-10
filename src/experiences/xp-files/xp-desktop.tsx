@@ -73,6 +73,31 @@ function formatTrayClock(d: Date) {
   return `${h}:${m} ${ampm}`;
 }
 
+function WinMaxButton({
+  maximized,
+  onToggle,
+}: {
+  maximized: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div
+      className="win-btn max"
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle();
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      role="button"
+      tabIndex={0}
+      title={maximized ? "Restore Down" : "Maximize"}
+      aria-label={maximized ? "Restore Down" : "Maximize"}
+    >
+      {maximized ? "❐" : "□"}
+    </div>
+  );
+}
+
 type TaskItem = {
   key: string;
   title: string;
@@ -573,6 +598,9 @@ export function XpDesktop({
   const [minimizedKeys, setMinimizedKeys] = useState<Set<string>>(
     () => new Set(),
   );
+  const [maximizedKeys, setMaximizedKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [startMenuOpen, setStartMenuOpen] = useState(false);
   const [trayClock, setTrayClock] = useState(() => formatTrayClock(new Date()));
   const recycleId = useRef(0);
@@ -632,6 +660,7 @@ export function XpDesktop({
       setGamesSelected(null);
       setFolderOpen(false);
       setMinimizedKeys(new Set());
+      setMaximizedKeys(new Set());
       setStartMenuOpen(false);
       setPopupBlocked({});
       setUnlockedIds(new Set());
@@ -661,6 +690,29 @@ export function XpDesktop({
       const next = new Set(prev);
       if (value) next.add(key);
       else next.delete(key);
+      return next;
+    });
+  }, []);
+
+  const isMaximized = useCallback(
+    (key: string) => maximizedKeys.has(key),
+    [maximizedKeys],
+  );
+
+  const toggleMaximize = useCallback((key: string) => {
+    setMaximizedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
+  const clearMaximized = useCallback((key: string) => {
+    setMaximizedKeys((prev) => {
+      if (!prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.delete(key);
       return next;
     });
   }, []);
@@ -1135,7 +1187,11 @@ export function XpDesktop({
   return (
     <div
       ref={rootRef}
-      className={cn("xp-desktop", className)}
+      className={cn(
+        "xp-desktop",
+        maximizedKeys.size > 0 && "has-maximized",
+        className,
+      )}
       role="dialog"
       aria-label="Windows XP files easter egg"
       onPointerDown={(e) => {
@@ -1209,7 +1265,10 @@ export function XpDesktop({
       {folderOpen && !isMinimized("explorer") ? (
         <div
           ref={folderRef}
-          className="xp-window main-window"
+          className={cn(
+            "xp-window main-window",
+            isMaximized("explorer") && "is-maximized",
+          )}
           style={{
             left: folderPos.x,
             top: folderPos.y,
@@ -1225,10 +1284,15 @@ export function XpDesktop({
         >
           <div
             className="titlebar"
+            onDoubleClick={() => toggleMaximize("explorer")}
             onPointerDown={(e) => {
               zTop.current += 1;
               if (folderRef.current) {
                 folderRef.current.style.zIndex = String(zTop.current);
+              }
+              if (isMaximized("explorer")) {
+                setFolderZ(zTop.current);
+                return;
               }
               startDrag(e, {
                 getOrigin: () => folderPos,
@@ -1256,12 +1320,16 @@ export function XpDesktop({
               >
                 _
               </div>
-              <div className="win-btn max">□</div>
+              <WinMaxButton
+                maximized={isMaximized("explorer")}
+                onToggle={() => toggleMaximize("explorer")}
+              />
               <div
                 className="win-btn close"
                 onClick={() => {
                   setFolderOpen(false);
                   setMinimized("explorer", false);
+                  clearMaximized("explorer");
                 }}
                 role="button"
                 tabIndex={0}
@@ -1383,10 +1451,14 @@ export function XpDesktop({
       {recycleWins.map((win) => {
         const key = `recycle-${win.id}`;
         if (isMinimized(key)) return null;
+        const maximized = isMaximized(key);
         return (
           <div
             key={key}
-            className="xp-window recycle-window"
+            className={cn(
+              "xp-window recycle-window",
+              maximized && "is-maximized",
+            )}
             style={{
               left: win.x,
               top: win.y,
@@ -1406,12 +1478,21 @@ export function XpDesktop({
           >
             <div
               className="titlebar"
+              onDoubleClick={() => toggleMaximize(key)}
               onPointerDown={(e) => {
                 zTop.current += 1;
                 const winEl = (e.currentTarget as HTMLElement).closest(
                   ".xp-window",
                 ) as HTMLElement | null;
                 if (winEl) winEl.style.zIndex = String(zTop.current);
+                if (maximized) {
+                  setRecycleWins((prev) =>
+                    prev.map((n) =>
+                      n.id === win.id ? { ...n, z: zTop.current } : n,
+                    ),
+                  );
+                  return;
+                }
                 startDrag(e, {
                   getOrigin: () => ({ x: win.x, y: win.y }),
                   commit: (pos) => {
@@ -1443,11 +1524,15 @@ export function XpDesktop({
                 >
                   _
                 </div>
-                <div className="win-btn max">□</div>
+                <WinMaxButton
+                  maximized={maximized}
+                  onToggle={() => toggleMaximize(key)}
+                />
                 <div
                   className="win-btn close"
                   onClick={() => {
                     setMinimized(key, false);
+                    clearMaximized(key);
                     setRecycleWins((prev) =>
                       prev.filter((n) => n.id !== win.id),
                     );
@@ -1478,10 +1563,14 @@ export function XpDesktop({
       {gamesFolderWins.map((win) => {
         const key = `games-folder-${win.id}`;
         if (isMinimized(key)) return null;
+        const maximized = isMaximized(key);
         return (
           <div
             key={key}
-            className="xp-window games-folder-window"
+            className={cn(
+              "xp-window games-folder-window",
+              maximized && "is-maximized",
+            )}
             style={{
               left: win.x,
               top: win.y,
@@ -1501,12 +1590,21 @@ export function XpDesktop({
           >
             <div
               className="titlebar"
+              onDoubleClick={() => toggleMaximize(key)}
               onPointerDown={(e) => {
                 zTop.current += 1;
                 const winEl = (e.currentTarget as HTMLElement).closest(
                   ".xp-window",
                 ) as HTMLElement | null;
                 if (winEl) winEl.style.zIndex = String(zTop.current);
+                if (maximized) {
+                  setGamesFolderWins((prev) =>
+                    prev.map((n) =>
+                      n.id === win.id ? { ...n, z: zTop.current } : n,
+                    ),
+                  );
+                  return;
+                }
                 startDrag(e, {
                   getOrigin: () => ({ x: win.x, y: win.y }),
                   commit: (pos) => {
@@ -1538,11 +1636,15 @@ export function XpDesktop({
                 >
                   _
                 </div>
-                <div className="win-btn max">□</div>
+                <WinMaxButton
+                  maximized={maximized}
+                  onToggle={() => toggleMaximize(key)}
+                />
                 <div
                   className="win-btn close"
                   onClick={() => {
                     setMinimized(key, false);
+                    clearMaximized(key);
                     setGamesFolderWins((prev) =>
                       prev.filter((n) => n.id !== win.id),
                     );
@@ -1606,11 +1708,15 @@ export function XpDesktop({
         if (!game) return null;
         const key = `game-${win.id}`;
         if (isMinimized(key)) return null;
+        const maximized = isMaximized(key);
         const Icon = game.Icon;
         return (
           <div
             key={`game-play-${win.id}`}
-            className="xp-window game-play-window"
+            className={cn(
+              "xp-window game-play-window",
+              maximized && "is-maximized",
+            )}
             style={{
               left: win.x,
               top: win.y,
@@ -1632,12 +1738,21 @@ export function XpDesktop({
           >
             <div
               className="titlebar"
+              onDoubleClick={() => toggleMaximize(key)}
               onPointerDown={(e) => {
                 zTop.current += 1;
                 const winEl = (e.currentTarget as HTMLElement).closest(
                   ".xp-window",
                 ) as HTMLElement | null;
                 if (winEl) winEl.style.zIndex = String(zTop.current);
+                if (maximized) {
+                  setGamePlayWins((prev) =>
+                    prev.map((n) =>
+                      n.id === win.id ? { ...n, z: zTop.current } : n,
+                    ),
+                  );
+                  return;
+                }
                 startDrag(e, {
                   getOrigin: () => ({ x: win.x, y: win.y }),
                   commit: (pos) => {
@@ -1669,11 +1784,15 @@ export function XpDesktop({
                 >
                   _
                 </div>
-                <div className="win-btn max">□</div>
+                <WinMaxButton
+                  maximized={maximized}
+                  onToggle={() => toggleMaximize(key)}
+                />
                 <div
                   className="win-btn close"
                   onClick={() => {
                     setMinimized(key, false);
+                    clearMaximized(key);
                     setGamePlayWins((prev) =>
                       prev.filter((n) => n.id !== win.id),
                     );
@@ -1698,10 +1817,14 @@ export function XpDesktop({
       {chromeWins.map((win) => {
         const key = `chrome-${win.id}`;
         if (isMinimized(key)) return null;
+        const maximized = isMaximized(key);
         return (
           <div
             key={key}
-            className="xp-window chrome-window"
+            className={cn(
+              "xp-window chrome-window",
+              maximized && "is-maximized",
+            )}
             style={{
               left: win.x,
               top: win.y,
@@ -1723,12 +1846,21 @@ export function XpDesktop({
           >
             <div
               className="titlebar"
+              onDoubleClick={() => toggleMaximize(key)}
               onPointerDown={(e) => {
                 zTop.current += 1;
                 const winEl = (e.currentTarget as HTMLElement).closest(
                   ".xp-window",
                 ) as HTMLElement | null;
                 if (winEl) winEl.style.zIndex = String(zTop.current);
+                if (maximized) {
+                  setChromeWins((prev) =>
+                    prev.map((n) =>
+                      n.id === win.id ? { ...n, z: zTop.current } : n,
+                    ),
+                  );
+                  return;
+                }
                 startDrag(e, {
                   getOrigin: () => ({ x: win.x, y: win.y }),
                   commit: (pos) => {
@@ -1760,11 +1892,15 @@ export function XpDesktop({
                 >
                   _
                 </div>
-                <div className="win-btn max">□</div>
+                <WinMaxButton
+                  maximized={maximized}
+                  onToggle={() => toggleMaximize(key)}
+                />
                 <div
                   className="win-btn close"
                   onClick={() => {
                     setMinimized(key, false);
+                    clearMaximized(key);
                     setChromeWins((prev) =>
                       prev.filter((n) => n.id !== win.id),
                     );
@@ -1793,11 +1929,12 @@ export function XpDesktop({
         if (!file) return null;
         const key = `notepad-${win.id}`;
         if (isMinimized(key)) return null;
+        const maximized = isMaximized(key);
 
         return (
           <div
             key={win.id}
-            className="xp-window notepad"
+            className={cn("xp-window notepad", maximized && "is-maximized")}
             style={{
               left: win.x,
               top: win.y,
@@ -1819,12 +1956,21 @@ export function XpDesktop({
           >
             <div
               className="titlebar"
+              onDoubleClick={() => toggleMaximize(key)}
               onPointerDown={(e) => {
                 zTop.current += 1;
                 const winEl = (e.currentTarget as HTMLElement).closest(
                   ".xp-window",
                 ) as HTMLElement | null;
                 if (winEl) winEl.style.zIndex = String(zTop.current);
+                if (maximized) {
+                  setNotepads((prev) =>
+                    prev.map((n) =>
+                      n.id === win.id ? { ...n, z: zTop.current } : n,
+                    ),
+                  );
+                  return;
+                }
                 startDrag(e, {
                   getOrigin: () => ({ x: win.x, y: win.y }),
                   commit: (pos) => {
@@ -1861,11 +2007,15 @@ export function XpDesktop({
                 >
                   _
                 </div>
-                <div className="win-btn max">□</div>
+                <WinMaxButton
+                  maximized={maximized}
+                  onToggle={() => toggleMaximize(key)}
+                />
                 <div
                   className="win-btn close"
                   onClick={() => {
                     setMinimized(key, false);
+                    clearMaximized(key);
                     setNotepads((prev) => prev.filter((n) => n.id !== win.id));
                   }}
                   role="button"
