@@ -23,7 +23,7 @@ import { ShaderExperienceCanvas } from "@/experiences/shared/shader-experience-c
 import { XpDesktop } from "@/experiences/xp-files/xp-desktop";
 import { useHoldChargeAudio } from "@/hooks/use-hold-charge-audio";
 import { useHoldInteraction } from "@/hooks/use-hold-interaction";
-import { useIsTouchDevice } from "@/hooks/use-media-query";
+import { useIsMobile, useIsTouchDevice } from "@/hooks/use-media-query";
 import { useMidBandSecret } from "@/hooks/use-mid-band-secret";
 import {
   playLogoExplodeSound,
@@ -51,8 +51,10 @@ type HeroSectionProps = {
 export function HeroSection({ projects, xpFiles }: HeroSectionProps) {
   const content = getContent().hero;
   const isTouch = useIsTouchDevice();
+  const isMobile = useIsMobile();
   const { setScrollLocked, scrollLocked } = useLenis();
   const rootRef = useRef<HTMLElement>(null);
+  const didAutoOpenProjects = useRef(false);
   const logoWrapRef = useRef<HTMLDivElement>(null);
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [pointer, setPointer] = useState({ x: 0, y: 0 });
@@ -96,6 +98,14 @@ export function HeroSection({ projects, xpFiles }: HeroSectionProps) {
     document.documentElement.dataset.scrollGate = "locked";
     setScrollLocked(true);
   }, [setScrollLocked]);
+
+  // Phone layout: open Selected Ideas by default (skip logo explode).
+  useEffect(() => {
+    if (!isMobile || didAutoOpenProjects.current) return;
+    if (projectsOpen || exploding || morphing || xpOpen) return;
+    didAutoOpenProjects.current = true;
+    markOverlayReady();
+  }, [isMobile, projectsOpen, exploding, morphing, xpOpen, markOverlayReady]);
 
   useEffect(() => {
     if (projectsOpen) {
