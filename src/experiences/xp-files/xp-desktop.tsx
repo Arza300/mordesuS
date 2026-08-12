@@ -6,12 +6,18 @@ import {
   useMemo,
   useRef,
   useState,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
 
 import { XpFileGlyph } from "@/experiences/xp-files/xp-icons";
+import {
+  XpContextMenu,
+  type XpCtxAction,
+  type XpCtxTarget,
+} from "@/experiences/xp-files/xp-context-menu";
 import { XpPasswordDialog } from "@/experiences/xp-files/xp-password-dialog";
 import {
   XpImageViewer,
@@ -433,6 +439,24 @@ function GoogleChromeIcon() {
 
 type DeskIconId = "my-computer" | "recycle-bin" | "chrome" | "games";
 
+type UserDeskItem = {
+  id: string;
+  label: string;
+  kind: "folder" | "text" | "bitmap" | "zip" | "shortcut";
+};
+
+type DeskClipboard = {
+  label: string;
+  kind: UserDeskItem["kind"] | "system";
+  sourceId: string;
+} | null;
+
+type PropsDialog = {
+  title: string;
+  heading: string;
+  lines: string[];
+} | null;
+
 type RecycleWin = {
   id: number;
   x: number;
@@ -587,7 +611,7 @@ export function XpDesktop({
   const [folderPos, setFolderPos] = useState({ x: 0, y: 48 });
   const [folderOpen, setFolderOpen] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
-  const [deskSelected, setDeskSelected] = useState<DeskIconId | null>(null);
+  const [deskSelected, setDeskSelected] = useState<string | null>(null);
   const [notepads, setNotepads] = useState<NotepadWin[]>([]);
   const [recycleWins, setRecycleWins] = useState<RecycleWin[]>([]);
   const [gamesFolderWins, setGamesFolderWins] = useState<GamesFolderWin[]>([]);
@@ -603,6 +627,19 @@ export function XpDesktop({
   );
   const [startMenuOpen, setStartMenuOpen] = useState(false);
   const [trayClock, setTrayClock] = useState(() => formatTrayClock(new Date()));
+  const [ctxMenu, setCtxMenu] = useState<{
+    x: number;
+    y: number;
+    target: XpCtxTarget;
+  } | null>(null);
+  const [deskClipboard, setDeskClipboard] = useState<DeskClipboard>(null);
+  const [autoArrange, setAutoArrange] = useState(false);
+  const [alignToGrid, setAlignToGrid] = useState(true);
+  const [userDeskItems, setUserDeskItems] = useState<UserDeskItem[]>([]);
+  const [propsDialog, setPropsDialog] = useState<PropsDialog>(null);
+  const [deskRefreshing, setDeskRefreshing] = useState(false);
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const userDeskId = useRef(0);
   const recycleId = useRef(0);
   const gamesFolderId = useRef(0);
   const gamePlayId = useRef(0);
@@ -662,6 +699,15 @@ export function XpDesktop({
       setMinimizedKeys(new Set());
       setMaximizedKeys(new Set());
       setStartMenuOpen(false);
+      setCtxMenu(null);
+      setPropsDialog(null);
+      setUserDeskItems([]);
+      setDeskClipboard(null);
+      setDeskRefreshing(false);
+      if (refreshTimer.current) {
+        clearTimeout(refreshTimer.current);
+        refreshTimer.current = null;
+      }
       setPopupBlocked({});
       setUnlockedIds(new Set());
       setPinPrompt(null);
@@ -824,6 +870,151 @@ export function XpDesktop({
     else if (id === "games") openGamesFolder();
     else openGoogleChrome();
   };
+
+  const openCtxMenu = useCallback((e: ReactMouseEvent, target: XpCtxTarget) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setStartMenuOpen(false);
+    const root = rootRef.current?.getBoundingClientRect();
+    const x = root ? e.clientX - root.left : e.clientX;
+    const y = root ? e.clientY - root.top : e.clientY;
+    setCtxMenu({ x, y, target });
+  }, []);
+
+  const handleCtxAction = useCallback(
+    (action: XpCtxAction) => {
+      const target = ctxMenu?.target;
+
+      if (action === "refresh") {
+        setDeskSelected(null);
+        if (refreshTimer.current) clearTimeout(refreshTimer.current);
+        setDeskRefreshing(true);
+        refreshTimer.current = setTimeout(() => {
+          setDeskRefreshing(false);
+          refreshTimer.current = null;
+        }, 220);
+        return;
+      }
+      if (action === "auto-arrange") {
+        setAutoArrange((v) => !v);
+        return;
+      }
+      if (action === "align-grid") {
+        setAlignToGrid((v) => !v);
+        return;
+      }
+      if (
+        action === "arrange-name" ||
+        action === "arrange-size" ||
+        action === "arrange-type" ||
+        action === "arrange-modified"
+      ) {
+        return;
+      }
+
+      if (action === "copy" && target?.kind === "icon") {
+        const user = userDeskItems.find((u) => u.id === target.id);
+        setDeskClipboard({
+          label: target.label,
+          kind: user?.kind ?? "system",
+          sourceId: target.id,
+        });
+        return;
+      }
+
+      if (action === "delete" && target?.kind === "icon") {
+        if (!target.id.startsWith("user-")) return;
+        setUserDeskItems((prev) => prev.filter((u) => u.id !== target.id));
+        setDeskSelected((cur) => (cur === target.id ? null : cur));
+        setDeskClipboard((clip) =>
+          clip?.sourceId === target.id ? null : clip,
+        );
+        return;
+      }
+
+      if (action === "paste" && deskClipboard) {
+        userDeskId.current += 1;
+        const id = `user-${userDeskId.current}`;
+        const kind =
+          deskClipboard.kind === "system" ? "shortcut" : deskClipboard.kind;
+        setUserDeskItems((prev) => [
+          ...prev,
+          {
+            id,
+            label: `Copy of ${deskClipboard.label}`,
+            kind,
+          },
+        ]);
+        return;
+      }
+
+      if (action.startsWith("new-")) {
+        userDeskId.current += 1;
+        const id = `user-${userDeskId.current}`;
+        const map = {
+          "new-folder": { label: "New Folder", kind: "folder" as const },
+          "new-shortcut": { label: "New Shortcut", kind: "shortcut" as const },
+          "new-bitmap": { label: "New Bitmap Image", kind: "bitmap" as const },
+          "new-text": { label: "New Text Document", kind: "text" as const },
+          "new-zip": {
+            label: "New Compressed (zipped) Folder",
+            kind: "zip" as const,
+          },
+        } as const;
+        const spec = map[action as keyof typeof map];
+        if (!spec) return;
+        setUserDeskItems((prev) => [...prev, { id, ...spec }]);
+        return;
+      }
+
+      if (action === "open" && target?.kind === "icon") {
+        if (target.id === "my-computer") focusExplorer();
+        else if (target.id === "recycle-bin") openRecycleBin();
+        else if (target.id === "games") openGamesFolder();
+        else if (target.id === "chrome") openGoogleChrome();
+        else if (target.id.startsWith("user-")) {
+          const item = userDeskItems.find((u) => u.id === target.id);
+          if (item?.kind === "folder") focusExplorer();
+        }
+        return;
+      }
+
+      if (action === "properties") {
+        if (target?.kind === "icon") {
+          setPropsDialog({
+            title: `${target.label} Properties`,
+            heading: target.label,
+            lines: [
+              "Type: Shortcut",
+              "Location: Desktop",
+              "Size: 1 KB",
+              "Created: Today",
+            ],
+          });
+        } else {
+          setPropsDialog({
+            title: "Display Properties",
+            heading: "Desktop",
+            lines: [
+              "Theme: Windows XP",
+              "Background: Bliss",
+              "Screen saver: None",
+              "Appearance: Luna (Blue)",
+            ],
+          });
+        }
+      }
+    },
+    [
+      ctxMenu,
+      deskClipboard,
+      userDeskItems,
+      focusExplorer,
+      openRecycleBin,
+      openGamesFolder,
+      openGoogleChrome,
+    ],
+  );
 
   const startDrag = useCallback(
     (
@@ -1194,9 +1385,24 @@ export function XpDesktop({
       )}
       role="dialog"
       aria-label="Windows XP files easter egg"
+      onContextMenu={(e) => {
+        const t = e.target as HTMLElement;
+        if (
+          t.closest(
+            ".xp-window, .xp-taskbar, .xp-start-menu, .xp-back, .xp-ctx-menu, .xp-props-dialog, iframe",
+          )
+        ) {
+          e.preventDefault();
+          setCtxMenu(null);
+          return;
+        }
+        if (t.closest(".desk-icon")) return;
+        openCtxMenu(e, { kind: "desktop" });
+      }}
       onPointerDown={(e) => {
         if (e.button === 0) {
           const t = e.target as HTMLElement;
+          if (!t.closest(".xp-ctx-menu")) setCtxMenu(null);
           // Skip game iframes / media controls — keep XP chrome clicks only.
           if (!t.closest(".game-frame, .xp-media-player, iframe")) {
             void playWindowsXpClickSound();
@@ -1218,7 +1424,10 @@ export function XpDesktop({
         ← Back to Mordesu
       </button>
 
-      <div className="desk-icons" onClick={() => setDeskSelected(null)}>
+      <div
+        className={cn("desk-icons", deskRefreshing && "is-refreshing")}
+        onClick={() => setDeskSelected(null)}
+      >
         {(
           [
             {
@@ -1255,8 +1464,52 @@ export function XpDesktop({
               e.stopPropagation();
               onDeskIconOpen(item.id);
             }}
+            onContextMenu={(e) => {
+              setDeskSelected(item.id);
+              openCtxMenu(e, {
+                kind: "icon",
+                id: item.id,
+                label: item.label,
+              });
+            }}
           >
             <div className="desk-glyph">{item.icon}</div>
+            <span className="desk-label">{item.label}</span>
+          </button>
+        ))}
+        {userDeskItems.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={cn("desk-icon", deskSelected === item.id && "selected")}
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeskSelected(item.id);
+            }}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              if (item.kind === "folder") focusExplorer();
+            }}
+            onContextMenu={(e) => {
+              setDeskSelected(item.id);
+              openCtxMenu(e, {
+                kind: "icon",
+                id: item.id,
+                label: item.label,
+              });
+            }}
+          >
+            <div className="desk-glyph">
+              {item.kind === "folder" || item.kind === "zip" ? (
+                <FolderSvg className="desk-svg" />
+              ) : item.kind === "shortcut" ? (
+                <MyComputerIcon />
+              ) : (
+                <span className="desk-file-badge" aria-hidden>
+                  {item.kind === "bitmap" ? "BMP" : "TXT"}
+                </span>
+              )}
+            </div>
             <span className="desk-label">{item.label}</span>
           </button>
         ))}
@@ -2261,6 +2514,55 @@ export function XpDesktop({
           <span className="xp-tray-clock">{trayClock}</span>
         </div>
       </div>
+
+      {ctxMenu ? (
+        <XpContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          target={ctxMenu.target}
+          canPaste={Boolean(deskClipboard)}
+          autoArrange={autoArrange}
+          alignToGrid={alignToGrid}
+          onAction={handleCtxAction}
+          onClose={() => setCtxMenu(null)}
+        />
+      ) : null}
+
+      {propsDialog ? (
+        <div
+          className="xp-props-dialog"
+          role="dialog"
+          aria-label={propsDialog.title}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <div className="xp-props-hd">
+            <span>{propsDialog.title}</span>
+            <div
+              className="win-btn close"
+              role="button"
+              tabIndex={0}
+              onClick={() => setPropsDialog(null)}
+            >
+              ✕
+            </div>
+          </div>
+          <div className="xp-props-body">
+            <strong>{propsDialog.heading}</strong>
+            {propsDialog.lines.map((line) => (
+              <div key={line}>{line}</div>
+            ))}
+          </div>
+          <div className="xp-props-ft">
+            <button
+              type="button"
+              className="xp-props-ok"
+              onClick={() => setPropsDialog(null)}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

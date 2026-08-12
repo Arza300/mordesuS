@@ -61,6 +61,10 @@
   width: 92px;
 }
 
+.xp-desktop .desk-icons.is-refreshing {
+  visibility: hidden;
+}
+
 .xp-desktop .desk-icon {
   display: flex;
   flex-direction: column;
@@ -110,6 +114,21 @@
   text-align: center;
   max-width: 88px;
   word-break: break-word;
+}
+
+.xp-desktop .desk-file-badge {
+  width: 40px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #7a96b8;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #fff, #dce6f5);
+  color: #1a3a6e;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: Tahoma, Arial, sans-serif;
+  box-shadow: 1px 2px 2px rgba(0, 0, 0, 0.25);
 }
 
 .xp-desktop .ttl-icon .desk-svg {
@@ -1324,6 +1343,180 @@
   font-size: 12px;
   font-weight: 700;
   color: #5a3a00;
+}
+
+/* ——— XP Context Menu (Luna) ——— */
+.xp-desktop .xp-ctx-menu {
+  position: absolute;
+  z-index: 400;
+  min-width: 198px;
+  padding: 2px;
+  background: #fff;
+  border: 1px solid #868a8e;
+  box-shadow:
+    2px 2px 0 rgba(0, 0, 0, 0.22),
+    1px 1px 0 #fff inset;
+  font-family: Tahoma, "Segoe UI", Arial, sans-serif;
+  font-size: 11px;
+  color: #000;
+  user-select: none;
+}
+
+.xp-desktop .xp-ctx-item,
+.xp-desktop .xp-ctx-sub {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  min-height: 22px;
+  margin: 0;
+  padding: 0 18px 0 0;
+  border: none;
+  background: transparent;
+  color: #000;
+  font: inherit;
+  text-align: left;
+  cursor: default;
+}
+
+.xp-desktop .xp-ctx-item:disabled,
+.xp-desktop .xp-ctx-item.is-disabled {
+  color: #aca899;
+}
+
+.xp-desktop .xp-ctx-label {
+  flex: 1 1 auto;
+  padding: 3px 10px 3px 10px;
+  white-space: nowrap;
+  color: inherit;
+}
+
+.xp-desktop .xp-ctx-check {
+  font-size: 11px;
+  line-height: 1;
+  color: inherit;
+}
+
+.xp-desktop .xp-ctx-arrow {
+  flex: 0 0 auto;
+  padding-right: 8px;
+  font-size: 9px;
+  color: inherit;
+}
+
+.xp-desktop .xp-ctx-item:hover:not(:disabled):not(.is-disabled),
+.xp-desktop .xp-ctx-item.is-open,
+.xp-desktop .xp-ctx-sub:hover,
+.xp-desktop .xp-ctx-sub.is-open {
+  background: #316ac5;
+  color: #fff;
+}
+
+.xp-desktop .xp-ctx-sep {
+  height: 7px;
+  margin: 0 4px;
+  border: none;
+  border-top: 1px solid #d4d0c8;
+  box-shadow: 0 1px 0 #fff;
+  background: transparent;
+}
+
+.xp-desktop .xp-ctx-flyout {
+  position: absolute;
+  top: -3px;
+  left: calc(100% - 4px);
+  z-index: 1;
+  min-width: 180px;
+  padding: 2px;
+  background: #fff;
+  color: #000;
+  border: 1px solid #868a8e;
+  box-shadow:
+    2px 2px 0 rgba(0, 0, 0, 0.22),
+    1px 1px 0 #fff inset;
+}
+
+.xp-desktop .xp-ctx-flyout .xp-ctx-item,
+.xp-desktop .xp-ctx-flyout .xp-ctx-sub {
+  color: #000;
+  background: transparent;
+}
+
+.xp-desktop .xp-ctx-flyout .xp-ctx-item:disabled,
+.xp-desktop .xp-ctx-flyout .xp-ctx-item.is-disabled {
+  color: #aca899;
+}
+
+.xp-desktop .xp-ctx-flyout .xp-ctx-item:hover:not(:disabled):not(.is-disabled) {
+  background: #316ac5;
+  color: #fff;
+}
+
+.xp-desktop .xp-ctx-flyout.flip-left {
+  left: auto;
+  right: calc(100% - 4px);
+}
+
+.xp-desktop .xp-props-dialog {
+  position: absolute;
+  left: 50%;
+  top: 18%;
+  z-index: 420;
+  width: min(360px, calc(100vw - 24px));
+  transform: translateX(-50%);
+  background: #ece9d8;
+  border: 1px solid #0a246a;
+  box-shadow: 3px 5px 16px rgba(0, 0, 0, 0.4);
+  font-family: Tahoma, Arial, sans-serif;
+}
+
+.xp-desktop .xp-props-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  padding: 0 4px 0 8px;
+  background: linear-gradient(180deg, #3f8cf3, #1657d6);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.35);
+}
+
+.xp-desktop .xp-props-body {
+  padding: 14px 16px;
+  font-size: 12px;
+  color: #000;
+  line-height: 1.45;
+}
+
+.xp-desktop .xp-props-body strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.xp-desktop .xp-props-ft {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.xp-desktop .xp-props-ok {
+  min-width: 72px;
+  height: 24px;
+  border: 1px solid #003c74;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #fff, #ece9d8);
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.xp-desktop .xp-props-ok:hover {
+  filter: brightness(1.04);
 }
 
 @media (max-width: 720px) {
