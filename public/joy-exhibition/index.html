@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Architecture of Joy | Immersive Exhibition</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Manrope:wght@200;300;400;500&display=swap" rel="stylesheet">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.29/bundled/lenis.min.js"></script>
+
+    <style>
+        /* ==========================================================================
+           01. CORE SYSTEM & VARIABLES
+           ========================================================================== */
+        :root {
+            /* High-End Editorial Gallery Palette */
+            --bg-light: #F2EFE9;     /* Warm Cashmere/Alabaster */
+            --text-dark: #1C1A17;    /* Deep Soft Onyx */
+            --bg-dark: #151412;      /* Midnight Onyx */
+            --text-light: #F2EFE9;   /* Warm Cashmere */
+            
+            --accent: #B75C40;       /* Refined Burnt Terracotta */
+            --text-muted: #857F75;   /* Sophisticated Taupe/Grey for small text */
+            
+            --font-serif: 'Cormorant Garamond', serif;
+            --font-sans: 'Manrope', sans-serif;
+
+            --pad-x: 5vw;
+        }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%; min-height: 100vh;
+            background-color: var(--bg-light); color: var(--text-dark);
+            font-family: var(--font-sans); font-weight: 300;
+            -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden; cursor: none;
+            transition: background-color 0.8s ease, color 0.8s ease;
+        }
+
+        ::selection { background-color: var(--accent); color: #fff; }
+
+        /* Smooth Scroll Engine Fixes */
+        html.lenis { height: auto; }
+        .lenis.lenis-smooth { scroll-behavior: auto; }
+        .lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+        .lenis.lenis-stopped { overflow: hidden; }
+
+        /* Cinematic Noise Overlay */
+        .noise {
+            position: fixed; inset: 0; z-index: 9998; pointer-events: none; opacity: 0.05; mix-blend-mode: multiply;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+        body.theme-dark .noise { mix-blend-mode: overlay; opacity: 0.08; }
+
+        body.theme-dark { background-color: var(--bg-dark); color: var(--text-light); }
+        body.theme-light { background-color: var(--bg-light); color: var(--text-dark); }
+
+        /* ==========================================================================
+           02. TYPOGRAPHY
+           ========================================================================== */
+        .t-display { font-family: var(--font-serif); font-size: clamp(4.5rem, 13vw, 16rem); line-height: 0.85; font-weight: 400; letter-spacing: -0.02em; margin: 0;}
+        .t-h1 { font-family: var(--font-serif); font-size: clamp(3rem, 8vw, 10rem); line-height: 0.9; font-weight: 400; letter-spacing: -0.01em; margin: 0;}
+        .t-h2 { font-family: var(--font-sans); font-size: clamp(2rem, 4vw, 5rem); line-height: 1; font-weight: 300; letter-spacing: -0.02em; margin: 0;}
+        .t-h3 { font-family: var(--font-serif); font-size: clamp(1.5rem, 3vw, 4rem); font-style: italic; font-weight: 400; margin: 0;}
+        
+        .t-body { font-size: clamp(1.1rem, 1.3vw, 1.5rem); line-height: 1.6; max-width: 550px; opacity: 0.85; }
+        
+        .t-caption { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 500; }
+        .text-accent { color: var(--accent) !important; }
+        .text-muted { color: var(--text-muted) !important; }
+        .font-serif { font-family: var(--font-serif); }
+        .italic { font-style: italic; }
+        .text-center { text-align: center; }
+
+        .flex-center { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+
+        .word-wrap { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: 0.15em; }
+        .word { display: inline-block; transform: translateY(115%); will-change: transform; transform-origin: top left; }
+
+        /* ==========================================================================
+           03. MAGNETIC CURSOR UI
+           ========================================================================== */
+        .cursor-dot {
+            position: fixed; top: 0; left: 0; width: 6px; height: 6px; border-radius: 50%;
+            background: var(--accent); pointer-events: none; z-index: 100000; transform: translate(-50%, -50%);
+        }
+        .cursor-ring {
+            position: fixed; top: 0; left: 0; width: 45px; height: 45px; border-radius: 50%;
+            border: 1px solid rgba(28, 26, 23, 0.3); pointer-events: none; z-index: 99999;
+            transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center;
+            font-family: var(--font-sans); font-size: 10px; font-weight: 600; letter-spacing: 0.1em; color: transparent;
+            transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1), height 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.4s, border-color 0.4s;
+        }
+        body.theme-dark .cursor-ring { border-color: rgba(242, 239, 233, 0.3); }
+        
+        .cursor-ring.active { width: 90px; height: 90px; background-color: var(--text-dark); border-color: transparent; color: var(--bg-light); mix-blend-mode: normal; }
+        body.theme-dark .cursor-ring.active { background-color: var(--text-light); color: var(--bg-dark); }
+
+        .nav { position: fixed; top: 0; left: 0; width: 100%; padding: 2.5vw var(--pad-x); display: flex; justify-content: space-between; z-index: 900; mix-blend-mode: difference; color: #fff; pointer-events: none; }
+        .loader { position: fixed; inset: 0; background: var(--bg-dark); color: var(--text-light); z-index: 999999; display: flex; flex-direction: column; justify-content: space-between; padding: var(--pad-x); }
+        .loader-perc { font-family: var(--font-serif); font-size: 16vw; line-height: 0.8; font-weight: 400; }
+        .loader-bar-wrap { width: 100%; height: 1px; background: rgba(255,255,255,0.15); position: relative; overflow: hidden; }
+        .loader-bar { position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: var(--text-light); }
+
+        /* ==========================================================================
+           04. GLOBAL LAYOUTS & IMAGE UTILS
+           ========================================================================== */
+        .section { position: relative; width: 100vw; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+        .padding-y { padding-top: 15vh; padding-bottom: 15vh; }
+        .padding-x { padding-left: var(--pad-x); padding-right: var(--pad-x); }
+        .flex-col { display: flex; flex-direction: column; }
+
+        .img-mask { position: relative; overflow: hidden; clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%); will-change: clip-path; background: #ddd; border-radius: 2px; }
+        .img-parallax { position: absolute; top: -15%; left: 0; width: 100%; height: 130%; object-fit: cover; will-change: transform; filter: grayscale(15%) brightness(0.9); transition: filter 0.8s ease, transform 1.2s cubic-bezier(0.16, 1, 0.3, 1); }
+        .hover-scale:hover .img-parallax { filter: grayscale(0%) brightness(1); transform: scale(1.04); }
+
+        /* ==========================================================================
+           05. SPECIFIC SECTION STYLES
+           ========================================================================== */
+
+        /* 1. Hero Section */
+        .s-hero { padding-top: 20vh; justify-content: flex-start; }
+        .hero-img-box { position: absolute; right: var(--pad-x); top: 50%; transform: translateY(-50%); width: 40vw; height: 75vh; z-index: 0; border-radius: 6px;}
+        .hero-img-box img { filter: url(#liquidFilter) grayscale(10%); transition: filter 1s ease, transform 1.5s ease; }
+        .hero-img-box:hover img { filter: url(#liquidFilter) grayscale(0%); transform: scale(1.03); }
+        .hero-content { position: relative; z-index: 10; pointer-events: none; mix-blend-mode: exclusion; color: #fff; }
+        .hero-company {
+            display: inline-block;
+            font-family: var(--font-serif);
+            font-size: 0.48em;
+            font-weight: 400;
+            letter-spacing: -0.02em;
+            line-height: 0.85;
+            margin-right: 0;
+            vertical-align: baseline;
+        }
+        .hero-mordesu {
+            margin-left: -0.08em;
+        }
+
+        /* 2. CREATIVE HIGHLIGHT TYPOGRAPHY BLOCK */
+        .s-creative { min-height: 130vh; display: flex; align-items: center; justify-content: center; }
+        .hl-container { max-width: 1400px; margin: 0 auto; text-align: center; line-height: 1.4; padding: 5vw 0; }
+        
+        .hl-word { display: inline-block; opacity: 0.15; vertical-align: middle; margin: 0 0.15em; font-family: var(--font-sans); font-size: clamp(2rem, 4vw, 5rem); font-weight: 300; transition: color 0.4s ease; will-change: opacity, color; color: inherit;}
+        .hl-word.serif { font-family: var(--font-serif); font-size: clamp(3.5rem, 6.5vw, 8rem); font-style: italic; color: var(--accent); }
+        
+        .hl-img { display: inline-block; vertical-align: middle; background-size: cover; background-position: center; opacity: 0.15; box-shadow: 0 10px 30px rgba(0,0,0,0.15); filter: grayscale(100%); transition: filter 0.4s, transform 0.4s; will-change: opacity, filter; }
+        .hl-img:hover { filter: grayscale(0%) !important; transform: scale(1.05); cursor: pointer; }
+        
+        .hl-img.pill { width: 14vw; height: 5vw; min-width: 100px; min-height: 35px; border-radius: 5vw; margin: 0 0.2em; transform: translateY(-0.2vw); }
+        .hl-img.circle { width: 1em; height: 1em; border-radius: 50%; margin: 0 0.05em; transform: translateY(-0.08em); }
+        .hl-img.arch { width: 1.2em; height: 1.5em; border-top-left-radius: 1.2em; border-top-right-radius: 1.2em; margin: 0 0.2em; transform: translateY(-0.1em); }
+
+        /* 3. CINEMATIC EXPAND */
+        .s-expand { height: 100vh; display: flex; align-items: center; justify-content: center; position: relative; background: var(--bg-dark); padding: 0;}
+        .expand-wrapper { width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; position: absolute; inset: 0; overflow: hidden; }
+        
+        .expand-container { 
+            width: 25vw; height: 60vh; 
+            border-radius: 300px; 
+            overflow: hidden; position: relative; 
+            will-change: width, height, border-radius;
+            -webkit-mask-image: -webkit-radial-gradient(white, black);
+            transform: translateZ(0); 
+        }
+        
+        .expand-img {
+            position: absolute; width: 100vw; height: 100vh; object-fit: cover;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            filter: brightness(0.6) grayscale(20%); transition: filter 1s ease;
+        }
+        .expand-text { position: absolute; z-index: 10; color: #fff; opacity: 0; pointer-events: none; display: flex; flex-direction: column; align-items: center; justify-content: center; inset: 0; }
+        .expand-text h2 {
+            color: #fff;
+            font-family: var(--font-serif);
+            font-size: clamp(3rem, 7vw, 8.5rem);
+            font-weight: 400;
+            font-style: italic;
+            line-height: 0.9;
+            letter-spacing: -0.02em;
+            margin: 0;
+            text-shadow: 0 8px 32px rgba(0,0,0,0.55);
+        }
+
+        /* 4. Horizontal Gallery */
+        .s-horiz { height: 100vh; overflow: hidden; position: relative; padding: 0; }
+        .horiz-track { display: flex; height: 100vh; width: max-content; }
+        .h-panel { width: 100vw; height: 100vh; padding: 0 var(--pad-x); display: flex; align-items: center; justify-content: space-between; gap: 6vw; }
+        .h-text { width: 32vw; max-width: 500px; }
+        .h-img { width: 48vw; height: 70vh; }
+        .h-img-site {
+            width: min(48vw, 820px);
+            height: auto;
+            aspect-ratio: 1024 / 724;
+            max-height: 66vh;
+            background: #111;
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+        .h-img-site .img-parallax {
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            object-position: center;
+            filter: grayscale(6%) brightness(0.98);
+        }
+        .h-img-site:hover .img-parallax {
+            filter: grayscale(0%) brightness(1);
+            transform: scale(1.015);
+        }
+
+        /* 5. The Hover List */
+        .s-list { justify-content: center; z-index: 10; border-top: 1px solid rgba(0,0,0,0.08); }
+        body.theme-dark .s-list { border-color: rgba(255,255,255,0.08); }
+        .list-wrap { width: 100%; max-width: 1400px; margin: 5vh auto 0; position: relative; }
+        
+        .l-item { display: flex; justify-content: space-between; align-items: center; padding: 4vw 0; border-bottom: 1px solid rgba(0,0,0,0.08); cursor: pointer; transition: border-color 0.4s; }
+        body.theme-dark .l-item { border-color: rgba(255,255,255,0.08); }
+        .l-item.is-active { border-color: var(--accent); }
+        
+        .l-title { transition: color 0.4s, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); margin: 0; pointer-events: none;}
+        .l-item.is-active .l-title { color: var(--accent); font-style: italic; transform: translateX(2vw); }
+        
+        .cursor-img-follower {
+            position: fixed; top: 0; left: 0; width: 26vw; height: 38vh; pointer-events: none; z-index: 5;
+            opacity: 0; transform: translate(-50%, -50%) scale(0.5); transform-origin: center center;
+            overflow: hidden; border-radius: 4px; box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+            will-change: transform, opacity;
+        }
+        .cg-inner { position: relative; width: 100%; height: 100%; }
+        .cg-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.15s ease; filter: brightness(0.85); }
+        .cg-img.active { opacity: 1; z-index: 1; }
+
+        /* 6. Infinite Marquee */
+        .s-marquee { height: 40vh; display: flex; align-items: center; overflow: hidden; padding: 0; border-top: 1px solid rgba(255,255,255,0.05); }
+        .marquee-wrap { display: flex; white-space: nowrap; width: max-content; }
+        .marquee-text { padding: 0 2vw; font-size: clamp(4rem, 10vw, 12rem); font-family: var(--font-serif); font-style: italic; color: transparent; -webkit-text-stroke: 1px rgba(255,255,255,0.3); transition: color 0.4s ease; cursor: default; }
+        .s-marquee:hover .marquee-text { color: var(--text-light); -webkit-text-stroke: 0px; }
+
+        /* 7. Client testimonials */
+        .archive-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2.4vw; height: auto; margin-top: 2vh; align-items: start; }
+        .grid-col { display: flex; flex-direction: column; gap: 2.4vw; }
+        .grid-col:nth-child(2) { margin-top: 8vh; }
+        .testimonial-card {
+            width: 100%;
+            background: #1c1c1c;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .testimonial-card img {
+            display: block;
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            object-position: center;
+            filter: brightness(0.96);
+            transition: filter 0.6s ease, transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .testimonial-card:hover img { filter: brightness(1); transform: scale(1.01); }
+
+        .mb-4 { margin-bottom: 1rem; }
+        .mb-6 { margin-bottom: 1.5rem; }
+        .mb-10 { margin-bottom: 2.5rem; }
+        .w-full { width: 100%; }
+        .mx-auto { margin-left: auto; margin-right: auto; }
+
+        .connect-sub {
+            max-width: 640px;
+            margin: 1.5rem auto 0;
+            font-size: clamp(1.05rem, 1.6vw, 1.45rem);
+            line-height: 1.5;
+            color: var(--text-muted);
+            font-weight: 300;
+        }
+        .connect-socials {
+            display: flex;
+            justify-content: center;
+            gap: 1.25rem;
+            margin-top: 2.5rem;
+        }
+        .connect-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(28,26,23,0.18);
+            color: var(--text-dark);
+            text-decoration: none;
+            transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease;
+        }
+        .connect-icon svg { width: 26px; height: 26px; display: block; }
+        .connect-icon:hover { transform: translateY(-4px); color: #fff; border-color: transparent; }
+        .connect-icon.whatsapp:hover { background: #25D366; }
+        .connect-icon.facebook:hover { background: #1877F2; }
+
+        /* Responsive Fallbacks */
+        @media (max-width: 1024px) {
+            .hero-img-box { position: relative; width: 100%; height: 50vh; top: auto; right: auto; transform: none; margin-top: 5vh; mix-blend-mode: normal; z-index: 0; opacity: 1; }
+            .hero-img-box img { filter: none; top: 0; height: 100%; }
+            .hero-content { mix-blend-mode: normal; color: var(--text-dark); }
+            .desktop-only { display: none; }
+            .hl-img.pill { width: 25vw; height: 9vw; }
+            .hl-img.circle { width: 1.2em; height: 1.2em; }
+            .hl-img.arch { width: 1.5em; height: 2em; }
+            .expand-container { width: 60vw; height: 40vh; border-radius: 100px; }
+            .s-expand { display: none; }
+            .horiz-track { flex-direction: column; width: 100vw; height: auto; }
+            .s-horiz { height: auto; overflow: visible; }
+            .h-panel { flex-direction: column; height: auto; padding: 10vh var(--pad-x); gap: 5vh; }
+            .h-text, .h-img { width: 100%; }
+            .h-img { height: auto; }
+            .h-img-site {
+                width: 100%;
+                height: auto;
+                max-height: none;
+                clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+            }
+            .h-img-site .img-parallax {
+                position: relative;
+                top: auto;
+                left: auto;
+                width: 100%;
+                height: auto;
+                object-fit: contain;
+            }
+            .archive-grid { grid-template-columns: 1fr; height: auto; gap: 3vh; }
+            .grid-col { gap: 3vh; }
+            .grid-col:nth-child(2), .grid-col:nth-child(3) { margin-top: 0; }
+            .cursor-dot, .cursor-ring, .cursor-img-follower { display: none !important; }
+            html, body { cursor: auto; }
+            .l-item.is-active { border-color: rgba(255,255,255,0.1); }
+            .l-item.is-active .l-title { transform: none; }
+        }
+    </style>
+</head>
+<body class="theme-light">
+
+    <svg style="width:0;height:0;position:absolute;">
+        <filter id="liquidFilter">
+            <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves="3" result="warp"></feTurbulence>
+            <feDisplacementMap in="SourceGraphic" in2="warp" scale="0" xChannelSelector="R" yChannelSelector="G" id="liquidMap"></feDisplacementMap>
+        </filter>
+    </svg>
+
+    <div class="noise"></div>
+    <div class="cursor-dot"></div>
+    <div class="cursor-ring"></div>
+
+    <div class="loader">
+        <div class="t-caption text-muted mb-4">Mordesu Studio</div>
+        <div class="loader-perc">0</div>
+        <div class="loader-bar-wrap"><div class="loader-bar"></div></div>
+    </div>
+
+    <nav class="nav">
+        <div class="t-caption text-muted"></div>
+        <div class="t-caption text-muted">The Creative Perspective</div>
+    </nav>
+
+    <main>
+
+        <section class="section s-hero padding-x">
+            <div class="hero-content">
+                <div class="t-caption text-muted mb-4 gs-fade" style="letter-spacing: 0.25em;">A Deep Dive into Innovation</div>
+                <h1 class="t-display">
+                    <span class="hero-company split-words">Company</span><span class="hero-mordesu split-words">Mordesu</span>
+                </h1>
+                <h1 class="t-display split-words" style="margin-left: 8vw;">Studio</h1>
+            </div>
+            
+            <div class="img-mask hero-img-box hover-scale" id="hero-img">
+                <img src="/joy-exhibition/hero.png?v=2" class="img-parallax" alt="Mordesu architecture">
+            </div>
+        </section>
+
+        <section class="section s-creative padding-y padding-x theme-light">
+            <div class="hl-container">
+                <span class="hl-word">Great</span>
+                <span class="hl-word">digital</span>
+                <span class="hl-word serif">experiences</span>
+                <span class="hl-word">are</span>
+                <span class="hl-word">not</span>
+                <span class="hl-word">simply</span>
+                <span class="hl-word">built.</span>
+                <br class="desktop-only">
+
+                <span class="hl-word">They</span>
+                <span class="hl-word">are</span>
+                <span class="hl-word">carefully</span>
+                <span class="hl-word serif">imagined,</span>
+                <span class="hl-word">thoughtfully</span>
+                <span class="hl-word">designed,</span>
+                <br class="desktop-only">
+                <span class="hl-word">and</span>
+                <span class="hl-word">brought</span>
+                <span class="hl-word">to</span>
+                <span class="hl-word">life</span>
+                <span class="hl-word">through</span>
+                <span class="hl-word serif">technology.</span>
+
+                <div style="height: 4vh; width: 100%;"></div>
+
+                <span class="hl-word" style="font-size: clamp(1.2rem, 2vw, 3rem); color: var(--text-muted);">At Mordesu Studio, we turn</span>
+                <span class="hl-word" style="text-transform: uppercase; letter-spacing: -0.05em; font-weight: 500;">bold</span>
+
+                <span class="hl-img arch hover-target" style="background-image: url('https://images.unsplash.com/photo-1472214103451-9374bd1c798e?q=80&w=400&auto=format&fit=crop');"></span>
+
+                <span class="hl-word" style="font-size: clamp(1.2rem, 2vw, 3rem); color: var(--text-muted);">ideas into powerful digital experiences</span>
+                <span class="hl-word" style="font-size: clamp(1.2rem, 2vw, 3rem); color: var(--text-muted);">that inspire, perform,</span>
+                <span class="hl-word" style="font-size: clamp(1.2rem, 2vw, 3rem); color: var(--text-muted);">and leave a lasting impression.</span>
+
+                <div style="height: 4vh; width: 100%;"></div>
+
+                <span class="hl-word">We</span>
+                <span class="hl-word">believe</span>
+                <span class="hl-word serif">technology</span>
+                <span class="hl-word">is</span>
+                <span class="hl-word">not</span>
+                <span class="hl-word">just</span>
+                <span class="hl-word">about</span>
+                <span class="hl-word">what</span>
+                <span class="hl-word">we</span>
+
+                <span class="hl-img circle hover-target" style="background-image: url('https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?q=80&w=400&auto=format&fit=crop');"></span>
+                <span class="hl-word" style="margin-left: -0.1em;">uild,</span>
+                <br class="desktop-only">
+                <span class="hl-word">but</span>
+                <span class="hl-word">about</span>
+                <span class="hl-word">what</span>
+                <span class="hl-word">we</span>
+                <span class="hl-word">make</span>
+                <span class="hl-word serif" style="border-bottom: 3px solid var(--accent);">possible.</span>
+            </div>
+        </section>
+
+        <section class="section s-expand theme-dark" id="expand-trigger">
+            <div class="expand-wrapper">
+                <div class="expand-container" id="expand-box">
+                    <img loading="lazy" src="/joy-exhibition/expand.png?v=3" alt="Mordesu Studio" class="expand-img" id="expand-img">
+                </div>
+                <div class="expand-text w-full flex-center">
+                    <h2>Mordesu Studio</h2>
+                </div>
+            </div>
+        </section>
+
+        <section class="s-horiz theme-light" id="hz-trigger">
+            <div class="horiz-track">
+                
+                <div class="h-panel">
+                    <div class="h-text">
+                        <div class="t-caption text-accent mb-6 gs-fade">E-commerce / Coffee Brand</div>
+                        <h2 class="t-h2 split-words mb-6"><span class="italic font-serif">Hoilamo</span></h2>
+                        <p class="t-body gs-fade">A refined e-commerce experience crafted for a modern coffee brand. Designed to turn the ritual of discovering and ordering coffee into a calm, seamless digital experience.</p>
+                        <p class="t-body gs-fade" style="margin-top: 1.25rem;">From product presentation to the final purchase, every detail was created to feel warm, intentional, and effortlessly simple.</p>
+                    </div>
+                    <a href="https://www.hoilamo.com/" target="_blank" rel="noopener noreferrer" class="img-mask h-img h-img-site hz-img hover-scale hover-target" style="display:block; text-decoration:none;" aria-label="Open Hoilamo website">
+                        <img loading="lazy" src="/joy-exhibition/hoilamo.png?v=3" class="img-parallax" alt="Hoilamo specialty coffee website">
+                    </a>
+                </div>
+
+                <div class="h-panel">
+                    <div class="h-text">
+                        <div class="t-caption text-accent mb-6 gs-fade">Education / Language</div>
+                        <h2 class="t-h2 split-words mb-6"><span class="italic font-serif">Deutsch-Deluxe</span></h2>
+                        <p class="t-body gs-fade">Learning a new language is more than memorizing words. It is about building confidence, understanding a new culture, and finding your voice in a different language.</p>
+                        <p class="t-body gs-fade" style="margin-top: 1.25rem;">Deutsch-Deluxe turns the learning journey into a clear, engaging experience — designed to make German feel simpler, more intuitive, and more enjoyable.</p>
+                    </div>
+                    <a href="https://deutsch-deluxe.mordesu.tech/" target="_blank" rel="noopener noreferrer" class="img-mask h-img h-img-site hz-img hover-scale hover-target" style="display:block; text-decoration:none;" aria-label="Open Deutsch Deluxe website">
+                        <img loading="lazy" src="/joy-exhibition/deutsch-deluxe.png?v=1" class="img-parallax" alt="Deutsch Deluxe language learning website">
+                    </a>
+                </div>
+
+                <div class="h-panel">
+                    <div class="h-text">
+                        <div class="t-caption text-accent mb-6 gs-fade">Gaming / E-commerce</div>
+                        <h2 class="t-h2 split-words mb-6"><span class="italic font-serif">GP Store</span></h2>
+                        <p class="t-body gs-fade">Gaming is more than a game. It is the worlds we explore, the challenges we overcome, and the moments we share.</p>
+                        <p class="t-body gs-fade" style="margin-top: 1.25rem;">GP Store brings games, consoles, digital products, and accessories together in one seamless shopping experience — built for players who expect more from every session.</p>
+                    </div>
+                    <a href="https://shop-v1s.vercel.app/" target="_blank" rel="noopener noreferrer" class="img-mask h-img h-img-site hz-img hover-scale hover-target" style="display:block; text-decoration:none; aspect-ratio: 1024 / 640;" aria-label="Open GP Store website">
+                        <img loading="lazy" src="/joy-exhibition/gp-store.png?v=1" class="img-parallax" alt="GP Store gaming e-commerce website">
+                    </a>
+                </div>
+
+            </div>
+        </section>
+
+        <section class="section s-list theme-dark padding-y padding-x" id="theme-trigger-dark">
+            <div class="t-caption text-accent mb-10 gs-fade text-center">Some of our other concepts</div>
+            
+            <div class="list-wrap" id="hover-list">
+                <div class="l-item hover-trigger" data-idx="0" data-href="https://www.hawaigar.com/">
+                    <h3 class="t-h1 l-title">HawaiGAR for Contracting</h3>
+                    <span class="t-caption">01 — Company</span>
+                </div>
+                <div class="l-item hover-trigger" data-idx="1" data-href="https://aftekasa.mordesu.tech/">
+                    <h3 class="t-h1 l-title">aftekasa Educational Platform</h3>
+                    <span class="t-caption">02 — Educational Platform</span>
+                </div>
+                <div class="l-item hover-trigger" data-idx="2" data-href="https://www.dr-gamer.net/">
+                    <h3 class="t-h1 l-title">Dr-Gamer Store</h3>
+                    <span class="t-caption">03 — E-commerce Store</span>
+                </div>
+                <div class="l-item hover-trigger" data-idx="3" data-href="https://www.mhm-online-school.com/">
+                    <h3 class="t-h1 l-title">mhm online school</h3>
+                    <span class="t-caption">04 — Educational Platform</span>
+                </div>
+                <div class="l-item hover-trigger" data-idx="4" data-href="https://www.supernova-game.com/">
+                    <h3 class="t-h1 l-title">supernova-game</h3>
+                    <span class="t-caption">05 — Steam Game</span>
+                </div>
+            </div>
+
+            <div class="cursor-img-follower" id="cursor-gallery">
+                <div class="cg-inner">
+                    <img src="/joy-exhibition/hawaigar.png?v=1"
+                         class="cg-img active" alt="HawaiGAR for Contracting">
+                    <img src="/joy-exhibition/aftekasa.png?v=1" class="cg-img" alt="aftekasa Educational Platform">
+                    <img src="/joy-exhibition/dr-gamer.png?v=1" class="cg-img" alt="Dr-Gamer Store">
+                    <img src="/joy-exhibition/mhm-online-school.png?v=1" class="cg-img" alt="mhm online school">
+                    <img src="/joy-exhibition/supernova-game.png?v=1" class="cg-img" alt="supernova-game">
+                </div>
+            </div>
+        </section>
+
+        <section class="section theme-dark s-marquee">
+            <div class="marquee-wrap">
+                <h1 class="marquee-text">Mordesu Studio We design digital experiences that matter ✦ </h1>
+                <h1 class="marquee-text">Mordesu Studio We design digital experiences that matter ✦ </h1>
+                <h1 class="marquee-text">Mordesu Studio We design digital experiences that matter ✦ </h1>
+            </div>
+        </section>
+
+        <section class="section padding-y padding-x theme-light" id="theme-trigger-light">
+            
+            <div class="flex-center w-full mx-auto" style="margin-bottom: 8vh; max-width: 900px;">
+                <div class="t-caption text-accent mb-6 gs-fade">What Our Clients Say</div>
+                <h2 class="t-body-lg gs-fade" style="text-align: center; font-size: clamp(1.5rem, 3vw, 3rem); font-family: var(--font-serif); font-style: italic;">
+                    Real experiences from the people and businesses we’ve had the pleasure of working with.
+                </h2>
+            </div>
+
+            <div class="archive-grid">
+                <div class="grid-col" data-speed="1.05">
+                    <div class="img-mask testimonial-card hover-target"><img loading="lazy" src="/joy-exhibition/testimonial-01.png?v=1" alt="Client testimonial — EngMohamed Magdy"></div>
+                    <div class="img-mask testimonial-card hover-target"><img loading="lazy" src="/joy-exhibition/testimonial-02.png?v=1" alt="Client testimonial — Nour Hisham"></div>
+                    <div class="img-mask testimonial-card hover-target"><img loading="lazy" src="/joy-exhibition/testimonial-03.png?v=1" alt="Client testimonial — Shehab Torky"></div>
+                    <div class="img-mask testimonial-card hover-target"><img loading="lazy" src="/joy-exhibition/testimonial-04.png?v=1" alt="Client testimonial — Mostafa Salah"></div>
+                </div>
+                <div class="grid-col" data-speed="0.8">
+                    <div class="img-mask testimonial-card hover-target"><img loading="lazy" src="/joy-exhibition/testimonial-05.png?v=1" alt="Client testimonial — Alaa El-Gibali"></div>
+                    <div class="img-mask testimonial-card hover-target"><img loading="lazy" src="/joy-exhibition/testimonial-06.png?v=1" alt="Client testimonial — Mahmoud Eladl"></div>
+                    <div class="img-mask testimonial-card hover-target"><img loading="lazy" src="/joy-exhibition/testimonial-07.png?v=1" alt="Client testimonial — Engineer Sami Lamai"></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section theme-light padding-x" style="justify-content: flex-end; padding-bottom: 4vh; padding-top: 15vh;">
+            <div class="text-center w-full" style="margin-bottom: 15vh;">
+                <h1 class="t-display split-words text-accent italic">Let’s Connect</h1>
+                <p class="connect-sub gs-fade">Reach out to us through any of the following ways</p>
+                <div class="connect-socials gs-fade">
+                    <a class="connect-icon whatsapp" href="https://api.whatsapp.com/send/?phone=201023005622&text&type=phone_number&app_absent=0" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp">
+                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.52 3.48A11.86 11.86 0 0 0 12.06 0C5.46 0 .1 5.36.1 11.96c0 2.11.55 4.17 1.6 5.99L0 24l6.2-1.62a11.9 11.9 0 0 0 5.86 1.5h.01c6.6 0 11.96-5.36 11.96-11.96 0-3.19-1.24-6.2-3.51-8.44ZM12.07 21.15h-.01a9.9 9.9 0 0 1-5.04-1.38l-.36-.21-3.68.96.98-3.58-.23-.37a9.86 9.86 0 0 1-1.52-5.28c0-5.45 4.44-9.88 9.9-9.88 2.64 0 5.12 1.03 6.98 2.9a9.82 9.82 0 0 1 2.9 6.98c0 5.46-4.44 9.86-9.9 9.86Zm5.42-7.4c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.05 1.02-1.05 2.5s1.07 2.9 1.22 3.1c.15.2 2.11 3.22 5.11 4.51.71.31 1.27.49 1.7.63.72.23 1.37.2 1.89.12.58-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35Z"/></svg>
+                    </a>
+                    <a class="connect-icon facebook" href="https://www.facebook.com/profile.php?id=61562686209159" target="_blank" rel="noopener noreferrer" aria-label="Visit Facebook">
+                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 12.07C22 6.5 17.52 2 12 2S2 6.5 2 12.07c0 5.02 3.66 9.18 8.44 9.93v-7.02H8.08v-2.91h2.36V9.41c0-2.33 1.39-3.62 3.52-3.62.99 0 2.04.18 2.04.18v2.25h-1.15c-1.13 0-1.48.7-1.48 1.42v1.71h2.52l-.4 2.91h-2.12V22c4.78-.75 8.44-4.91 8.44-9.93Z"/></svg>
+                    </a>
+                </div>
+            </div>
+
+            <footer class="w-full gs-fade" style="border-top: 1px solid rgba(28,26,23,0.15); padding-top: 2vw; display: flex; justify-content: space-between; align-items: center;">
+                <div class="t-caption text-muted">© 2026 Mordesu Studio</div>
+                <div class="t-caption hover-target text-accent" style="cursor: pointer;" onclick="window.scrollTo(0,0)">Return to the Top</div>
+            </footer>
+        </section>
+
+    </main>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            gsap.registerPlugin(ScrollTrigger);
+
+            document.querySelectorAll('.split-words').forEach(el => {
+                const text = el.innerText;
+                el.innerHTML = '';
+                text.split(' ').forEach(word => {
+                    if (word.trim() === '') return;
+                    el.innerHTML += `<span class="word-wrap"><span class="word">${word}&nbsp;</span></span>`;
+                });
+            });
+
+            const lenis = new Lenis({ duration: 1.5, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), smooth: true });
+            lenis.stop(); 
+            lenis.on('scroll', ScrollTrigger.update);
+            gsap.ticker.add((time) => { lenis.raf(time * 1000) });
+            gsap.ticker.lagSmoothing(0);
+
+            const cursorDot = document.querySelector('.cursor-dot');
+            const cursorRing = document.querySelector('.cursor-ring');
+            let mouseX = window.innerWidth / 2, mouseY = window.innerHeight / 2;
+            let ringX = mouseX, ringY = mouseY;
+
+            window.addEventListener('mousemove', (e) => {
+                mouseX = e.clientX; mouseY = e.clientY;
+                gsap.to(cursorDot, { x: mouseX, y: mouseY, duration: 0.1, ease: "power2.out" });
+            });
+
+            gsap.ticker.add(() => {
+                ringX += (mouseX - ringX) * 0.15; ringY += (mouseY - ringY) * 0.15;
+                gsap.set(cursorRing, { x: ringX, y: ringY });
+            });
+
+            document.querySelectorAll('.hover-target, .hover-trigger, .hl-img').forEach(el => {
+                el.addEventListener('mouseenter', () => { cursorRing.classList.add('active'); cursorRing.innerText = "VIEW"; });
+                el.addEventListener('mouseleave', () => { cursorRing.classList.remove('active'); cursorRing.innerText = ""; });
+            });
+
+            const liquidMap = document.querySelector('#liquidMap');
+            const heroImgBox = document.querySelector('.hero-img-box');
+            let liquidTl = gsap.timeline({ paused: true });
+            liquidTl.to(liquidMap, { attr: { scale: 40 }, duration: 0.8, ease: "power2.out" })
+                    .to(liquidMap, { attr: { scale: 0 }, duration: 1.2, ease: "power2.inOut" });
+
+            if(heroImgBox && liquidMap) heroImgBox.addEventListener('mouseenter', () => liquidTl.restart());
+
+            if (heroImgBox) {
+                let heroClicks = [];
+                heroImgBox.style.cursor = 'pointer';
+                heroImgBox.addEventListener('click', () => {
+                    const now = Date.now();
+                    heroClicks = heroClicks.filter((t) => now - t < 2500);
+                    heroClicks.push(now);
+                    if (heroClicks.length >= 8) {
+                        heroClicks = [];
+                        try {
+                            window.parent.postMessage({ type: 'mordesu:open-xp' }, window.location.origin);
+                        } catch (err) {}
+                    }
+                });
+            }
+
+            let progress = { val: 0 };
+            const percEl = document.querySelector('.loader-perc');
+            const tlLoader = gsap.timeline({ onComplete: () => { lenis.start(); initScrollAnimations(); } });
+
+            tlLoader.to(progress, {
+                val: 100, duration: 2.2, ease: "power3.inOut",
+                onUpdate: () => {
+                    percEl.innerText = Math.round(progress.val);
+                    gsap.set('.loader-bar', { width: progress.val + "%" });
+                }
+            })
+            .to('.loader', { yPercent: -100, duration: 1.2, ease: "power4.inOut", delay: 0.2 })
+            .to('#hero-img', { clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)", duration: 1.8, ease: "power4.inOut" }, "-=0.8")
+            .fromTo('#hero-img .img-parallax', { scale: 1.3 }, { scale: 1, duration: 2.5, ease: "power3.out" }, "-=1.8")
+            .to('.s-hero .word', { y: '0%', duration: 1.2, stagger: 0.05, ease: "power4.out" }, "-=1.5")
+            .to('.s-hero .gs-fade', { opacity: 1, y: 0, duration: 1, ease: "power3.out" }, "-=1.2");
+
+            function initScrollAnimations() {
+                
+                gsap.to('.hl-word, .hl-img', {
+                    opacity: 1, filter: "grayscale(0%)", stagger: 0.05,
+                    scrollTrigger: { trigger: ".hl-container", start: "top 75%", end: "bottom 60%", scrub: 1 }
+                });
+
+                if (window.innerWidth > 1024) {
+                    const expandTl = gsap.timeline({
+                        scrollTrigger: { trigger: "#expand-trigger", start: "center center", end: "+=1500", pin: true, scrub: 1 }
+                    });
+                    
+                    expandTl.to('.expand-container', { width: '100vw', height: '100vh', borderRadius: '0px', ease: "power2.inOut", duration: 1 })
+                            .to('#expand-img', { filter: "brightness(0.7) grayscale(0%)", duration: 1 }, "<")
+                            .to('.expand-text', { opacity: 1, duration: 0.3 }, "-=0.2");
+                }
+
+                if (window.innerWidth > 1024) {
+                    const hTrack = document.querySelector('.horiz-track');
+                    let hTween = gsap.to(hTrack, {
+                        xPercent: -100 * (2 / 3), 
+                        ease: "none",
+                        scrollTrigger: { trigger: "#hz-trigger", pin: true, scrub: 1, end: () => "+=" + hTrack.scrollWidth }
+                    });
+
+                    gsap.utils.toArray('.hz-img').forEach(mask => {
+                        gsap.to(mask, {
+                            scrollTrigger: { trigger: mask, containerAnimation: hTween, start: "left 75%", toggleActions: "play none none reverse" },
+                            clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)", duration: 1.5, ease: "power4.inOut"
+                        });
+                    });
+                }
+
+                const listSection = document.getElementById('hover-list');
+                const listItems = listSection.querySelectorAll('.hover-trigger');
+                const gallery = document.getElementById('cursor-gallery');
+                const galleryImgs = gallery.querySelectorAll('.cg-img');
+                
+                const xTo = gsap.quickTo(gallery, "x", {duration: 0.6, ease: "power3.out"});
+                const yTo = gsap.quickTo(gallery, "y", {duration: 0.6, ease: "power3.out"});
+                const rotTo = gsap.quickTo(gallery, "rotation", {duration: 0.8, ease: "power3.out"});
+
+                let isHoveringList = false;
+                let activeGalleryIdx = null;
+
+                function getItemAtY(clientY) {
+                    const items = [...listItems];
+                    for (let i = 0; i < items.length; i++) {
+                        const rect = items[i].getBoundingClientRect();
+                        let top = rect.top;
+                        let bottom = rect.bottom;
+                        if (i > 0) {
+                            const prev = items[i - 1].getBoundingClientRect();
+                            top = (prev.bottom + rect.top) / 2;
+                        }
+                        if (i < items.length - 1) {
+                            const next = items[i + 1].getBoundingClientRect();
+                            bottom = (rect.bottom + next.top) / 2;
+                        }
+                        if (clientY >= top && clientY < bottom) return items[i];
+                    }
+                    const last = items[items.length - 1].getBoundingClientRect();
+                    if (clientY >= last.top && clientY <= last.bottom) return items[items.length - 1];
+                    return null;
+                }
+
+                function setActiveItem(item) {
+                    if (!item) return;
+                    const idx = item.getAttribute('data-idx');
+                    if (activeGalleryIdx === idx) return;
+                    activeGalleryIdx = idx;
+                    listItems.forEach(el => el.classList.toggle('is-active', el === item));
+                    galleryImgs.forEach((img, i) => img.classList.toggle('active', i == idx));
+                }
+
+                function showGalleryFollower(e) {
+                    isHoveringList = true;
+                    gsap.to(gallery, { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(1.5)" });
+                    cursorRing.style.opacity = '0';
+                    if (e) gsap.set(gallery, { x: e.clientX, y: e.clientY });
+                }
+
+                function hideGalleryFollower() {
+                    isHoveringList = false;
+                    activeGalleryIdx = null;
+                    listItems.forEach(el => el.classList.remove('is-active'));
+                    gsap.to(gallery, { opacity: 0, scale: 0.6, duration: 0.4, ease: "power2.in" });
+                    cursorRing.style.opacity = '1';
+                }
+
+                listSection.addEventListener('mousemove', (e) => {
+                    const item = getItemAtY(e.clientY);
+                    if (item) setActiveItem(item);
+
+                    if (isHoveringList) {
+                        xTo(e.clientX);
+                        yTo(e.clientY);
+                        rotTo((e.clientX / window.innerWidth - 0.5) * 20);
+                    }
+                });
+
+                listSection.addEventListener('mouseenter', (e) => {
+                    const item = getItemAtY(e.clientY);
+                    if (item) setActiveItem(item);
+                    showGalleryFollower(e);
+                });
+
+                listSection.addEventListener('mouseleave', hideGalleryFollower);
+
+                ScrollTrigger.create({
+                    trigger: '#theme-trigger-dark',
+                    start: 'top bottom',
+                    end: 'bottom top',
+                    onLeave: hideGalleryFollower,
+                    onLeaveBack: hideGalleryFollower,
+                });
+
+                listItems.forEach(item => {
+                    item.addEventListener('click', () => {
+                        const href = item.getAttribute('data-href');
+                        if (href) window.open(href, '_blank', 'noopener,noreferrer');
+                    });
+                });
+
+                gsap.to('.marquee-wrap', {
+                    xPercent: -50, ease: 'none',
+                    scrollTrigger: { trigger: '.s-marquee', start: "top bottom", end: "bottom top", scrub: true }
+                });
+
+                if (window.innerWidth > 1024) {
+                    gsap.utils.toArray('.grid-col').forEach(col => {
+                        let speed = col.getAttribute('data-speed');
+                        gsap.to(col, {
+                            y: () => -150 * speed, ease: "none",
+                            scrollTrigger: { trigger: '.archive-grid', start: "top bottom", end: "bottom top", scrub: 1 }
+                        });
+                    });
+                }
+
+                document.querySelectorAll('section:not(.s-hero)').forEach(sec => {
+                    const words = sec.querySelectorAll('.word');
+                    if(words.length) {
+                        gsap.to(words, {
+                            scrollTrigger: { trigger: sec, start: "top 80%", toggleActions: "play none none reverse" },
+                            y: '0%', duration: 1.2, stagger: 0.04, ease: "power4.out"
+                        });
+                    }
+
+                    const fades = sec.querySelectorAll('.gs-fade');
+                    if(fades.length) {
+                        gsap.fromTo(fades, { opacity: 0, y: 30 }, {
+                            scrollTrigger: { trigger: sec, start: "top 85%", toggleActions: "play none none reverse" },
+                            opacity: 1, y: 0, duration: 1.2, stagger: 0.1, ease: "power3.out"
+                        });
+                    }
+
+                    const imgMasks = sec.querySelectorAll('.img-mask:not(#hero-img):not(.hz-img)');
+                    imgMasks.forEach(mask => {
+                        gsap.to(mask, {
+                            scrollTrigger: { trigger: mask, start: "top 85%", toggleActions: "play none none reverse" },
+                            clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)", duration: 1.6, ease: "power4.inOut"
+                        });
+                    });
+                });
+
+                gsap.utils.toArray('.img-parallax').forEach(img => {
+                    if(img.closest('.s-expand') || img.closest('.h-img-site') || img.closest('.testimonial-card')) return; 
+                    gsap.to(img, {
+                        yPercent: 15, ease: "none",
+                        scrollTrigger: { trigger: img.parentElement, start: "top bottom", end: "bottom top", scrub: true }
+                    });
+                });
+                
+                ScrollTrigger.create({
+                    trigger: "#theme-trigger-dark", start: "top 50%", end: "bottom 50%",
+                    onEnter: () => document.body.className = "theme-dark",
+                    onLeaveBack: () => document.body.className = "theme-light"
+                });
+                ScrollTrigger.create({
+                    trigger: "#theme-trigger-light", start: "top 60%", end: "bottom 0%",
+                    onEnter: () => document.body.className = "theme-light",
+                    onLeaveBack: () => document.body.className = "theme-dark"
+                });
+            }
+        });
+    </script>
+</body>
+</html>

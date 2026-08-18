@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
-import { DM_Sans, Outfit, Syne } from "next/font/google";
+import {
+  Cormorant_Garamond,
+  DM_Sans,
+  Manrope,
+  Outfit,
+  Syne,
+} from "next/font/google";
 
 import {
   ContactPopup,
@@ -34,6 +40,21 @@ const outfit = Outfit({
   weight: ["200", "300", "400", "500", "600", "700"],
 });
 
+const cormorant = Cormorant_Garamond({
+  variable: "--font-joy-serif",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["300", "400", "500"],
+  style: ["normal", "italic"],
+});
+
+const manrope = Manrope({
+  variable: "--font-joy-sans",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["200", "300", "400", "500"],
+});
+
 export const metadata: Metadata = defaultMetadata;
 
 export default function RootLayout({
@@ -44,7 +65,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <body
-        className={`${dmSans.variable} ${syne.variable} ${outfit.variable} flex min-h-dvh flex-col antialiased`}
+        className={`${dmSans.variable} ${syne.variable} ${outfit.variable} ${cormorant.variable} ${manrope.variable} flex min-h-dvh flex-col antialiased`}
       >
         <AppProviders>
           <SkipToContent />

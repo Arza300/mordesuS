@@ -45,7 +45,7 @@ export function LoadingScreen() {
     <AnimatePresence>
       {!done && (
         <motion.div
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#0a0a0a]"
+          className="site-chrome fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#0a0a0a]"
           initial={{ opacity: 1 }}
           exit={{
             opacity: 0,

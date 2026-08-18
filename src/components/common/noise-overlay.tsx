@@ -1,3 +1,3 @@
 export function NoiseOverlay() {
-  return <div className="noise-overlay" aria-hidden />;
+  return <div className="site-chrome noise-overlay" aria-hidden />;
 }

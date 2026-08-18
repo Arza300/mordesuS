@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import Lenis from "lenis";
+import { usePathname } from "next/navigation";
 
 import {
   registerGsapPlugins,
@@ -41,6 +42,8 @@ export function SmoothScrollProvider({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const isJoyExhibition = pathname === "/";
   const reducedMotion = useReducedMotion();
   const lenisRef = useRef<Lenis | null>(null);
   const [lenis, setLenis] = useState<Lenis | null>(null);
@@ -70,7 +73,7 @@ export function SmoothScrollProvider({
   );
 
   useEffect(() => {
-    if (reducedMotion) {
+    if (isJoyExhibition || reducedMotion) {
       setScrollLockedState(false);
       return;
     }
@@ -111,7 +114,7 @@ export function SmoothScrollProvider({
       lenisRef.current = null;
       setLenis(null);
     };
-  }, [reducedMotion]);
+  }, [isJoyExhibition, reducedMotion]);
 
   useEffect(() => {
     if (!lenisRef.current || reducedMotion) return;

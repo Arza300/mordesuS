@@ -2,6 +2,7 @@ export { AboutSection } from "@/components/sections/about";
 export { ContactSection } from "@/components/sections/contact";
 export { FaqSection } from "@/components/sections/faq";
 export { HeroSection } from "@/components/sections/hero";
+export { JoyExhibition } from "@/components/sections/joy-exhibition";
 export { ProcessSection } from "@/components/sections/process";
 export { ProjectsSection } from "@/components/sections/projects";
 export { ServicesSection } from "@/components/sections/services";

@@ -86,7 +86,7 @@ export function Navbar() {
     <>
       <header
         className={cn(
-          "pointer-events-none fixed inset-x-0 top-0 z-[70] transition-opacity duration-300",
+          "site-chrome pointer-events-none fixed inset-x-0 top-0 z-[70] transition-opacity duration-300",
           hideChrome && "pointer-events-none opacity-0",
         )}
         aria-hidden={hideChrome || undefined}
